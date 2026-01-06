@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width,initial-scale=1,viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#111111" />
+    <title>10パン工程タイマー（延長）</title>
+    <style>
+      :root {
+        --bg: #0f1115;
+        --card: #171a21;
+        --muted: #aeb6c2;
+        --fg: #eef2f7;
+        --ok: #2dd4bf;
+        --warn: #fbbf24;
+        --bad: #fb7185;
+        --line: #273041;
+        --btn: #232a36;
+        --btn2: #2b3445;
+        --radius: 16px;
+        --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+          "Liberation Mono", "Courier New", monospace;
+        --sans: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+          Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: var(--sans);
+        background: linear-gradient(180deg, #0f1115, #0b0d11);
+        color: var(--fg);
+        -webkit-tap-highlight-color: transparent;
+      }
+      header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        padding: 14px 14px 10px;
+        background: rgba(15, 17, 21, 0.92);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid rgba(39, 48, 65, 0.7);
+      }
+      .title-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+      }
+      h1 {
+        font-size: 18px;
+        margin: 0;
+        letter-spacing: 0.02em;
+      }
+      .top-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+      }
+      button {
+        appearance: none;
+        border: 1px solid rgba(39, 48, 65, 0.9);
+        background: var(--btn);
+        color: var(--fg);
+        padding: 10px 12px;
+        border-radius: 12px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      button:active {
+        transform: translateY(1px);
+      }
+      button.secondary {
+        background: transparent;
+      }
+      button.primary {
+        background: var(--btn2);
+      }
+      button.danger {
+        border-color: rgba(251, 113, 133, 0.7);
+      }
+      button.ok {
+        border-color: rgba(45, 212, 191, 0.7);
+      }
+      button.warn {
+        border-color: rgba(251, 191, 36, 0.75);
+      }
+      .subrow {
+        margin-top: 10px;
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      .toggles {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .toggle {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(39, 48, 65, 0.9);
+        background: rgba(23, 26, 33, 0.5);
+      }
+      .toggle input {
+        width: 18px;
+        height: 18px;
+      }
+
+      main {
+        padding: 14px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 12px;
+      }
+      @media (min-width: 920px) {
+        .grid {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+      }
+      @media (min-width: 1200px) {
+        .grid {
+          grid-template-columns: repeat(4, minmax(0, 1fr));
+        }
+      }
+
+      .card {
+        background: rgba(23, 26, 33, 0.96);
+        border: 1px solid rgba(39, 48, 65, 0.9);
+        border-radius: var(--radius);
+        padding: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        min-height: 292px;
+      }
+      .card.running {
+        border-color: rgba(45, 212, 191, 0.55);
+      }
+      .card.stageDone {
+        border-color: rgba(251, 191, 36, 0.7);
+        box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.18),
+          0 10px 30px rgba(0, 0, 0, 0.22);
+      }
+
+      .row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+      .label {
+        flex: 1;
+        min-width: 0;
+        font-size: 14px;
+        font-weight: 800;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+      .badge {
+        font-family: var(--mono);
+        font-size: 12px;
+        color: var(--muted);
+        padding: 4px 8px;
+        border-radius: 999px;
+        border: 1px solid rgba(39, 48, 65, 0.9);
+        background: rgba(15, 17, 21, 0.5);
+      }
+      .stage {
+        font-size: 12px;
+        color: var(--muted);
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+      }
+      .stage strong {
+        color: var(--fg);
+      }
+      .time {
+        font-family: var(--mono);
+        font-size: 34px;
+        letter-spacing: 0.02em;
+        line-height: 1.05;
+      }
+
+      input[type="text"] {
+        width: 100%;
+        padding: 10px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(39, 48, 65, 0.9);
+        background: rgba(15, 17, 21, 0.6);
+        color: var(--fg);
+        font-size: 14px;
+      }
+      .actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .actions button {
+        flex: 1;
+        min-width: 96px;
+      }
+
+      .extend-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+      .extend-actions button {
+        flex: 1;
+        min-width: 96px;
+      }
+
+      .preset {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin-bottom: 12px;
+      }
+      select {
+        padding: 10px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(39, 48, 65, 0.9);
+        background: rgba(15, 17, 21, 0.6);
+        color: var(--fg);
+        font-size: 14px;
+      }
+
+      .footer-actions {
+        margin-top: 14px;
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .queue {
+        margin-top: 12px;
+        border: 1px solid rgba(39, 48, 65, 0.9);
+        background: rgba(23, 26, 33, 0.75);
+        border-radius: 16px;
+        padding: 12px;
+      }
+      .queue h2 {
+        margin: 0 0 8px 0;
+        font-size: 13px;
+        color: var(--muted);
+        font-weight: 800;
+      }
+      .queue-list {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        font-family: var(--mono);
+        font-size: 13px;
+      }
+      .queue-item {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        flex-wrap: wrap;
+        padding: 8px 10px;
+        border: 1px solid rgba(39, 48, 65, 0.75);
+        background: rgba(15, 17, 21, 0.55);
+        border-radius: 12px;
+      }
+      .queue-item span {
+        color: var(--muted);
+        font-family: var(--sans);
+        font-size: 12px;
+      }
+
+      dialog {
+        border: none;
+        border-radius: 18px;
+        width: min(760px, 94vw);
+        background: rgba(23, 26, 33, 0.98);
+        color: var(--fg);
+        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+        padding: 14px;
+      }
+      dialog::backdrop {
+        background: rgba(0, 0, 0, 0.55);
+      }
+      .dlg-head {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .dlg-title {
+        font-weight: 800;
+        font-size: 15px;
+      }
+      .table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0 8px;
+      }
+      .table th {
+        font-size: 12px;
+        color: var(--muted);
+        text-align: left;
+        font-weight: 700;
+      }
+      .rowbox {
+        border: 1px solid rgba(39, 48, 65, 0.9);
+        background: rgba(15, 17, 21, 0.55);
+        border-radius: 14px;
+        padding: 10px;
+        display: grid;
+        grid-template-columns: 1.4fr 110px 110px 86px;
+        gap: 8px;
+        align-items: center;
+      }
+      .rowbox input[type="number"] {
+        width: 100%;
+        padding: 10px 10px;
+        border-radius: 12px;
+        border: 1px solid rgba(39, 48, 65, 0.9);
+        background: rgba(15, 17, 21, 0.6);
+        color: var(--fg);
+        font-size: 14px;
+        font-family: var(--mono);
+      }
+      .rowbox .del {
+        border-color: rgba(251, 113, 133, 0.7);
+      }
+      .dlg-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+        flex-wrap: wrap;
+        margin-top: 10px;
+      }
+      .hint {
+        opacity: 0.9;
+      }
+
+      .toast {
+        position: fixed;
+        left: 50%;
+        bottom: 18px;
+        transform: translateX(-50%);
+        background: rgba(15, 17, 21, 0.92);
+        border: 1px solid rgba(39, 48, 65, 0.9);
+        border-radius: 14px;
+        padding: 12px 14px;
+        min-width: min(520px, 92vw);
+        color: var(--fg);
+        box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
+        display: none;
+        z-index: 999;
+      }
+      .toast strong {
+        display: block;
+        font-size: 14px;
+        margin-bottom: 4px;
+      }
+      .toast .sub {
+        color: var(--muted);
+        font-size: 12px;
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="title-row">
+        <h1>10パン工程タイマー（延長）</h1>
+        <div class="top-actions">
+          <button class="ok" id="allStart">全開始</button>
+          <button id="allStop">全停止</button>
+          <button class="danger" id="allReset">全リセット</button>
+          <button class="secondary" id="fullscreen">全画面</button>
+        </div>
+      </div>
+
+      <div class="subrow">
+        <div class="toggles">
+          <label class="toggle"
+            ><input type="checkbox" id="soundToggle" checked />音</label
+          >
+          <label class="toggle"
+            ><input type="checkbox" id="vibeToggle" checked />バイブ</label
+          >
+          <label class="toggle"
+            ><input type="checkbox" id="toastToggle" checked />画面通知</label
+          >
+        </div>
+        <div class="hint" id="statusHint">
+          工程完了で停止。延長（+分）で同工程を再開できます。
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div class="preset">
+        <select id="presetSelect"></select>
+        <button class="primary" id="savePreset">プリセット保存</button>
+        <button id="loadPreset">読み込み</button>
+        <button class="danger" id="deletePreset">削除</button>
+      </div>
+
+      <div class="grid" id="grid"></div>
+
+      <div class="queue" id="queueBox">
+        <h2>次に鳴る順（稼働中のみ）</h2>
+        <div class="queue-list" id="queueList"></div>
+      </div>
+
+      <div class="footer-actions">
+        <div>延長は「残り時間に加算」または「待機中なら延長分で再開」。</div>
+        <div id="clock"></div>
+      </div>
+    </main>
+
+    <dialog id="stageDialog">
+      <div class="dlg-head">
+        <div class="dlg-title" id="dlgTitle">工程編集</div>
+        <button class="secondary" id="dlgClose">閉じる</button>
+      </div>
+
+      <div style="color: var(--muted); font-size: 12px; margin-bottom: 8px">
+        工程名と時間を設定（最大8工程）。時間0は無視されます。
+      </div>
+
+      <table class="table">
+        <thead>
+          <tr>
+            <th>工程名</th>
+            <th>分</th>
+            <th>秒</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="stageTbody"></tbody>
+      </table>
+
+      <div class="dlg-actions">
+        <button id="addStage">工程追加</button>
+        <button class="primary" id="dlgSave">保存</button>
+      </div>
+    </dialog>
+
+    <div class="toast" id="toast">
+      <strong id="toastTitle"></strong>
+      <div class="sub" id="toastSub"></div>
+    </div>
+
+    <script>
+      (() => {
+        // ===== iPad Safari 用エラー可視化 =====
+        window.addEventListener("error", function (e) {
+          alert(
+            "[JS error]\n" + e.message + "\n" + e.filename + ":" + e.lineno
+          );
+        });
+        window.addEventListener("unhandledrejection", function (e) {
+          alert("[Promise]\n" + (e.reason?.message || e.reason));
+        });
+        // =====================================
+        // ===== 画面内エラー表示（デバッグ用） =====
+        window.addEventListener("error", (e) => {
+          const msg = `[JS error] ${e.message} @${e.filename}:${e.lineno}`;
+          alert(msg);
+        });
+        window.addEventListener("unhandledrejection", (e) => {
+          const msg = `[Promise rejection] ${
+            e.reason && e.reason.message ? e.reason.message : e.reason
+          }`;
+          alert(msg);
+        });
+        // =========================================
+
+        const N = 10;
+        const MAX_STAGES = 8;
+        const LS_KEY = "breadChainTimer10_extend_v1";
+        const PRESET_KEY = "breadChainTimer10_extend_presets_v1";
+
+        // 延長ボタンの候補（分）：ここを変えるだけでUIが変わります
+        const EXTEND_MINUTES = [5, 10, 15];
+
+        const grid = document.getElementById("grid");
+        const clock = document.getElementById("clock");
+        const statusHint = document.getElementById("statusHint");
+
+        const soundToggle = document.getElementById("soundToggle");
+        const vibeToggle = document.getElementById("vibeToggle");
+        const toastToggle = document.getElementById("toastToggle");
+
+        const presetSelect = document.getElementById("presetSelect");
+        const savePresetBtn = document.getElementById("savePreset");
+        const loadPresetBtn = document.getElementById("loadPreset");
+        const deletePresetBtn = document.getElementById("deletePreset");
+
+        const allStartBtn = document.getElementById("allStart");
+        const allStopBtn = document.getElementById("allStop");
+        const allResetBtn = document.getElementById("allReset");
+        const fullscreenBtn = document.getElementById("fullscreen");
+
+        const queueList = document.getElementById("queueList");
+        const queueBox = document.getElementById("queueBox");
+
+        // dialog
+        const dlg = document.getElementById("stageDialog");
+        const dlgTitle = document.getElementById("dlgTitle");
+        const dlgClose = document.getElementById("dlgClose");
+        const dlgSave = document.getElementById("dlgSave");
+        const addStageBtn = document.getElementById("addStage");
+        const stageTbody = document.getElementById("stageTbody");
+        let editingIndex = null;
+
+        // toast
+        const toast = document.getElementById("toast");
+        const toastTitle = document.getElementById("toastTitle");
+        const toastSub = document.getElementById("toastSub");
+        let toastTimer = null;
+
+        // ---- 工程テンプレ
+        const STAGE_TEMPLATES = {
+          "ハード系（目安）": [
+            { name: "一次発酵", sec: 60 * 60 },
+            { name: "ベンチ", sec: 20 * 60 },
+            { name: "最終発酵", sec: 45 * 60 },
+            { name: "焼成", sec: 25 * 60 },
+            { name: "冷却", sec: 30 * 60 },
+          ],
+          "バゲット（目安）": [
+            { name: "一次発酵", sec: 150 * 60 },
+            { name: "ベンチ", sec: 30 * 60 },
+            { name: "最終発酵", sec: 45 * 60 },
+            { name: "焼成", sec: 22 * 60 },
+            { name: "冷却", sec: 20 * 60 },
+          ],
+          "食パン（目安）": [
+            { name: "一次発酵", sec: 60 * 60 },
+            { name: "分割→丸め", sec: 10 * 60 },
+            { name: "ベンチ", sec: 20 * 60 },
+            { name: "成形", sec: 10 * 60 },
+            { name: "最終発酵", sec: 60 * 60 },
+            { name: "焼成", sec: 35 * 60 },
+            { name: "冷却", sec: 60 * 60 },
+          ],
+          "自家製酵母（目安）": [
+            { name: "一次発酵", sec: 180 * 60 },
+            { name: "パンチ/折り込み", sec: 30 * 60 },
+            { name: "一次発酵 続き", sec: 120 * 60 },
+            { name: "ベンチ", sec: 30 * 60 },
+            { name: "最終発酵", sec: 90 * 60 },
+            { name: "焼成", sec: 28 * 60 },
+            { name: "冷却", sec: 45 * 60 },
+          ],
+        };
+
+        // ---- State
+        const state = {
+          settings: { sound: true, vibe: true, toast: true },
+          timers: [],
+        };
+
+        // Safari安全な初期化
+        for (let i = 0; i < N; i++) {
+          state.timers.push({
+            id: i + 1,
+            bread: "パン " + (i + 1),
+            stages: normalizeStages(STAGE_TEMPLATES["ハード系（目安）"]),
+            stageIdx: 0,
+            remainingSec: 0,
+            running: false,
+            stageDone: false,
+            lastTick: null,
+          });
+        }
+
+        // ---- Audio / Vibe / Toast
+        let audioCtx = null;
+        function ensureAudio() {
+          if (!audioCtx) {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if (AC) audioCtx = new AC();
+          }
+          if (audioCtx && audioCtx.state === "suspended")
+            audioCtx.resume().catch(() => {});
+        }
+        function sleep(ms) {
+          return new Promise((r) => setTimeout(r, ms));
+        }
+
+        async function beepCount(count) {
+          if (!state.settings.sound) return;
+          ensureAudio();
+          if (!audioCtx) return;
+          const times = Math.min(4, Math.max(1, count));
+          for (let k = 0; k < times; k++) {
+            const o = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            o.type = "sine";
+            o.frequency.value = 880;
+            g.gain.value = 0.0001;
+            o.connect(g);
+            g.connect(audioCtx.destination);
+            o.start();
+            const now = audioCtx.currentTime;
+            g.gain.exponentialRampToValueAtTime(0.25, now + 0.01);
+            g.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+            o.stop(now + 0.21);
+            await sleep(260);
+          }
+        }
+        function vibrate(pattern) {
+          if (!state.settings.vibe) return;
+          if (navigator.vibrate) navigator.vibrate(pattern);
+        }
+        function showToast(title, sub) {
+          if (!state.settings.toast) return;
+          toastTitle.textContent = title;
+          toastSub.textContent = sub || "";
+          toast.style.display = "block";
+          if (toastTimer) clearTimeout(toastTimer);
+          toastTimer = setTimeout(() => {
+            toast.style.display = "none";
+          }, 4500);
+        }
+
+        // ---- Utils
+        const pad2 = (n) => String(n).padStart(2, "0");
+        const format = (sec) => {
+          sec = Math.max(0, Math.floor(sec));
+          const m = Math.floor(sec / 60);
+          const s = sec % 60;
+          return `${pad2(m)}:${pad2(s)}`;
+        };
+        function clampInt(v, min, max) {
+          v = Number.isFinite(v) ? v : parseInt(v, 10);
+          if (Number.isNaN(v)) v = 0;
+          return Math.min(max, Math.max(min, v));
+        }
+        function normalizeStages(arr) {
+          if (!Array.isArray(arr)) return [];
+          return arr
+            .map((s) => ({
+              name: String(s?.name ?? "").trim(),
+              sec: clampInt(s?.sec ?? 0, 0, 99 * 60 + 59),
+            }))
+            .filter((s) => s.name && s.sec > 0)
+            .slice(0, MAX_STAGES);
+        }
+        const stageSec = (t, idx) => {
+          const st = t.stages[idx];
+          return st ? clampInt(st.sec ?? 0, 0, 99 * 60 + 59) : 0;
+        };
+        const currentStageName = (t) => t.stages[t.stageIdx]?.name ?? "—";
+
+        function saveState() {
+          const payload = {
+            settings: state.settings,
+            timers: state.timers.map((t) => ({
+              bread: t.bread,
+              stages: t.stages,
+              stageIdx: t.stageIdx,
+              remainingSec: t.remainingSec,
+              running: t.running,
+              stageDone: t.stageDone,
+              lastTick: t.lastTick,
+            })),
+          };
+          localStorage.setItem(LS_KEY, JSON.stringify(payload));
+        }
+        function loadState() {
+          try {
+            const raw = localStorage.getItem(LS_KEY);
+            if (!raw) return;
+            const payload = JSON.parse(raw);
+            if (payload.settings)
+              state.settings = { ...state.settings, ...payload.settings };
+            if (Array.isArray(payload.timers) && payload.timers.length === N) {
+              payload.timers.forEach((pt, i) => {
+                const t = state.timers[i];
+                t.bread = String(pt.bread ?? t.bread);
+                t.stages = normalizeStages(pt.stages);
+                if (t.stages.length === 0)
+                  t.stages = normalizeStages(
+                    STAGE_TEMPLATES["ハード系（目安）"]
+                  );
+                t.stageIdx = clampInt(pt.stageIdx ?? 0, 0, t.stages.length - 1);
+                t.remainingSec = clampInt(
+                  pt.remainingSec ?? stageSec(t, t.stageIdx),
+                  0,
+                  99 * 60 + 59
+                );
+                t.running = !!pt.running;
+                t.stageDone = !!pt.stageDone;
+                t.lastTick = pt.lastTick ?? null;
+              });
+            }
+          } catch (_) {}
+        }
+
+        function getPresets() {
+          try {
+            return JSON.parse(
+              localStorage.getItem("breadChainTimer10_extend_presets_v1") ||
+                "{}"
+            );
+          } catch (_) {
+            return {};
+          }
+        }
+        function setPresets(obj) {
+          localStorage.setItem(PRESET_KEY, JSON.stringify(obj));
+        }
+        function refreshPresetSelect() {
+          const presets = getPresets();
+          const names = Object.keys(presets).sort((a, b) =>
+            a.localeCompare(b, "ja")
+          );
+          presetSelect.innerHTML = "";
+          const opt0 = document.createElement("option");
+          opt0.value = "";
+          opt0.textContent = "プリセット選択";
+          presetSelect.appendChild(opt0);
+          for (const name of names) {
+            const opt = document.createElement("option");
+            opt.value = name;
+            opt.textContent = name;
+            presetSelect.appendChild(opt);
+          }
+        }
+
+        // ---- Timer control
+        function startTimer(i) {
+          const t = state.timers[i];
+          const sec = stageSec(t, t.stageIdx);
+          if (sec <= 0) return;
+          if (t.remainingSec <= 0) t.remainingSec = sec;
+          t.running = true;
+          t.stageDone = false;
+          t.lastTick = Date.now();
+        }
+        function stopTimer(i) {
+          const t = state.timers[i];
+          t.running = false;
+          t.lastTick = null;
+        }
+        function resetTimer(i) {
+          const t = state.timers[i];
+          t.running = false;
+          t.stageDone = false;
+          t.lastTick = null;
+          t.remainingSec = stageSec(t, t.stageIdx);
+        }
+        function goPrevStage(i) {
+          const t = state.timers[i];
+          t.stageIdx = Math.max(0, t.stageIdx - 1);
+          t.running = false;
+          t.stageDone = false;
+          t.lastTick = null;
+          t.remainingSec = stageSec(t, t.stageIdx);
+        }
+
+        // 延長：同工程の残り時間に加算
+        // - 稼働中：残りに加算
+        // - 停止中：残りに加算（0なら延長分をセット）
+        // - 工程完了（待機）：延長分をセットして自動再開（=1操作）
+        function extendStage(i, addMin) {
+          const t = state.timers[i];
+          const addSec = addMin * 60;
+
+          // 1) 工程完了（待機）なら「延長して再開」
+          if (t.stageDone) {
+            t.remainingSec = addSec;
+            t.stageDone = false;
+            t.running = true;
+            t.lastTick = Date.now();
+            showToast(
+              `${t.bread}：${currentStageName(t)} 延長`,
+              `+${addMin}分で再開`
+            );
+            return;
+          }
+
+          // 2) それ以外（稼働中/停止中）
+          if (t.remainingSec <= 0) {
+            t.remainingSec = addSec;
+          } else {
+            t.remainingSec = Math.min(99 * 60 + 59, t.remainingSec + addSec);
+          }
+
+          // ★変更点：停止中でも延長＝再開（稼働中ならそのまま）
+          if (!t.running) {
+            t.running = true;
+            t.lastTick = Date.now();
+          }
+
+          showToast(
+            `${t.bread}：${currentStageName(t)} 延長`,
+            `+${addMin}分（残り ${format(t.remainingSec)}）`
+          );
+        }
+        // ===== 長押し連続延長（+1分） =====
+        const HOLD_REPEAT_MS = 200; // 連続で加算する間隔（200ms = 1秒で+5分）
+        const HOLD_FIRST_DELAY = 250; // 押し始めから連続開始までの遅延
+
+        function startHoldExtend(buttonEl, timerIndex) {
+          // 二重起動防止
+          stopHoldExtend(buttonEl);
+
+          // 押した瞬間に+1分
+          extendStage(timerIndex, 1);
+
+          // 長押し継続で連続加算
+          const stateObj = { intervalId: null, timeoutId: null };
+          buttonEl.__holdState = stateObj;
+
+          stateObj.timeoutId = setTimeout(() => {
+            stateObj.intervalId = setInterval(() => {
+              extendStage(timerIndex, 1);
+              saveState();
+              render();
+            }, HOLD_REPEAT_MS);
+          }, HOLD_FIRST_DELAY);
+
+          saveState();
+          render();
+        }
+
+        function stopHoldExtend(buttonEl) {
+          const st = buttonEl.__holdState;
+          if (!st) return;
+          if (st.timeoutId) clearTimeout(st.timeoutId);
+          if (st.intervalId) clearInterval(st.intervalId);
+          buttonEl.__holdState = null;
+        }
+        // ===================================
+
+        // ---- UI render
+        function render() {
+          soundToggle.checked = !!state.settings.sound;
+          vibeToggle.checked = !!state.settings.vibe;
+          toastToggle.checked = !!state.settings.toast;
+
+          grid.innerHTML = "";
+          state.timers.forEach((t, idx) => {
+            const card = document.createElement("div");
+            card.className =
+              "card" +
+              (t.running ? " running" : "") +
+              (t.stageDone ? " stageDone" : "");
+
+            const top = document.createElement("div");
+            top.className = "row";
+
+            const label = document.createElement("div");
+            label.className = "label";
+            label.textContent = t.bread;
+
+            const badge = document.createElement("div");
+            badge.className = "badge";
+            badge.textContent = `#${t.id}`;
+
+            top.appendChild(label);
+            top.appendChild(badge);
+
+            const stageLine = document.createElement("div");
+            stageLine.className = "stage";
+            stageLine.innerHTML = `
+            <span>工程: <strong>${currentStageName(t)}</strong></span>
+            <span>(${t.stageIdx + 1}/${t.stages.length})</span>
+            <span>${
+              t.running ? "稼働中" : t.stageDone ? "工程完了（待機）" : "停止"
+            }</span>
+          `;
+
+            const time = document.createElement("div");
+            time.className = "time";
+            time.textContent = format(t.remainingSec);
+
+            const breadInput = document.createElement("input");
+            breadInput.type = "text";
+            breadInput.value = t.bread;
+            breadInput.placeholder = "パン名（例：カンパーニュ）";
+            breadInput.addEventListener("change", () => {
+              t.bread = breadInput.value.trim() || `パン ${t.id}`;
+              saveState();
+              render();
+            });
+
+            // テンプレ + 工程編集
+            const templateRow = document.createElement("div");
+            templateRow.className = "actions";
+
+            const tpl = document.createElement("select");
+            const opt0 = document.createElement("option");
+            opt0.value = "";
+            opt0.textContent = "工程テンプレ適用";
+            tpl.appendChild(opt0);
+            Object.keys(STAGE_TEMPLATES).forEach((name) => {
+              const o = document.createElement("option");
+              o.value = name;
+              o.textContent = name;
+              tpl.appendChild(o);
+            });
+            tpl.addEventListener("change", () => {
+              ensureAudio();
+              const name = tpl.value;
+              if (!name) return;
+              if (
+                !confirm(
+                  `「${t.bread}」にテンプレ「${name}」を適用しますか？（工程が上書きされます）`
+                )
+              ) {
+                tpl.value = "";
+                return;
+              }
+              t.stages = normalizeStages(STAGE_TEMPLATES[name]);
+              t.stageIdx = 0;
+              t.running = false;
+              t.stageDone = false;
+              t.lastTick = null;
+              t.remainingSec = stageSec(t, 0);
+              tpl.value = "";
+              saveState();
+              render();
+            });
+
+            const editBtn = document.createElement("button");
+            editBtn.className = "primary";
+            editBtn.textContent = "工程編集";
+            editBtn.addEventListener("click", () => {
+              ensureAudio();
+              openStageDialog(idx);
+            });
+
+            templateRow.appendChild(tpl);
+            templateRow.appendChild(editBtn);
+
+            // 延長ボタン（今回の要件）
+            const extendRow = document.createElement("div");
+            extendRow.className = "extend-actions";
+            EXTEND_MINUTES.forEach((m) => {
+              const b = document.createElement("button");
+              b.className = "warn";
+              b.textContent = `+${m}分`;
+              b.addEventListener("click", () => {
+                ensureAudio();
+                extendStage(idx, m);
+                saveState();
+                render();
+              });
+              extendRow.appendChild(b);
+            });
+            // +1分（長押しで連続）
+            const holdBtn = document.createElement("button");
+            holdBtn.className = "warn";
+            holdBtn.textContent = "+1分（長押し）";
+
+            // iOS/Androidで安定するよう pointer を優先
+            holdBtn.addEventListener("pointerdown", (e) => {
+              e.preventDefault(); // 長押しメニューやスクロール誤作動を抑制
+              ensureAudio();
+              startHoldExtend(holdBtn, idx);
+            });
+            holdBtn.addEventListener("pointerup", () =>
+              stopHoldExtend(holdBtn)
+            );
+            holdBtn.addEventListener("pointercancel", () =>
+              stopHoldExtend(holdBtn)
+            );
+            holdBtn.addEventListener("pointerleave", () =>
+              stopHoldExtend(holdBtn)
+            );
+
+            // フォールバック（古い環境向け）
+            holdBtn.addEventListener("touchend", () => stopHoldExtend(holdBtn));
+            holdBtn.addEventListener("mouseup", () => stopHoldExtend(holdBtn));
+
+            extendRow.appendChild(holdBtn);
+
+            // 基本操作
+            const actions = document.createElement("div");
+            actions.className = "actions";
+
+            const startBtn = document.createElement("button");
+            startBtn.className = "ok";
+            startBtn.textContent = t.running ? "停止" : "開始";
+            startBtn.addEventListener("click", () => {
+              ensureAudio();
+              if (t.running) stopTimer(idx);
+              else startTimer(idx);
+              saveState();
+              render();
+            });
+
+            const resetBtn = document.createElement("button");
+            resetBtn.textContent = "リセット";
+            resetBtn.addEventListener("click", () => {
+              ensureAudio();
+              resetTimer(idx);
+              saveState();
+              render();
+            });
+
+            const prevBtn = document.createElement("button");
+            prevBtn.textContent = "前工程";
+            prevBtn.addEventListener("click", () => {
+              ensureAudio();
+              goPrevStage(idx);
+              saveState();
+              render();
+            });
+
+            actions.appendChild(startBtn);
+            actions.appendChild(resetBtn);
+            actions.appendChild(prevBtn);
+
+            card.appendChild(top);
+            card.appendChild(stageLine);
+            card.appendChild(time);
+            card.appendChild(breadInput);
+            card.appendChild(templateRow);
+            card.appendChild(extendRow);
+            card.appendChild(actions);
+
+            grid.appendChild(card);
+          });
+
+          renderQueue();
+        }
+
+        // ---- Queue
+        function renderQueue() {
+          const now = Date.now();
+          const items = state.timers
+            .map((t, i) => {
+              if (!t.running) return null;
+              const endAt = now + t.remainingSec * 1000;
+              return {
+                i,
+                endAt,
+                remainingSec: t.remainingSec,
+                bread: t.bread,
+                stage: currentStageName(t),
+              };
+            })
+            .filter(Boolean)
+            .sort((a, b) => a.endAt - b.endAt)
+            .slice(0, 8);
+
+          queueList.innerHTML = "";
+          if (items.length === 0) {
+            queueBox.style.display = "none";
+            return;
+          }
+          queueBox.style.display = "block";
+
+          items.forEach((x, idx) => {
+            const div = document.createElement("div");
+            div.className = "queue-item";
+            const eta = new Date(x.endAt);
+            const hh = pad2(eta.getHours()),
+              mm = pad2(eta.getMinutes()),
+              ss = pad2(eta.getSeconds());
+            div.innerHTML = `
+            <div>${String(idx + 1).padStart(2, "0")}  ${format(
+              x.remainingSec
+            )}  <span>${hh}:${mm}:${ss} 終了見込み</span></div>
+            <div>${x.bread}｜${x.stage}</div>
+          `;
+            queueList.appendChild(div);
+          });
+        }
+
+        // ---- Tick（工程が0になったら停止して「工程完了」）
+        function markStageDone(i) {
+          const t = state.timers[i];
+          t.running = false;
+          t.lastTick = null;
+          t.remainingSec = 0;
+          t.stageDone = true;
+        }
+
+        function tick() {
+          const now = Date.now();
+
+          for (let i = 0; i < state.timers.length; i++) {
+            const t = state.timers[i];
+            if (!t.running) continue;
+
+            if (t.lastTick == null) t.lastTick = now;
+            const deltaMs = now - t.lastTick;
+            if (deltaMs < 250) continue;
+
+            const dec = Math.floor(deltaMs / 1000);
+            if (dec <= 0) continue;
+
+            t.remainingSec = Math.max(0, t.remainingSec - dec);
+            t.lastTick += dec * 1000;
+
+            if (t.remainingSec <= 0) {
+              markStageDone(i);
+
+              const title = `${t.bread}：${currentStageName(t)} 終了`;
+              const sub = `#${t.id}  必要なら延長（+分）で同工程を続行`;
+              showToast(title, sub);
+
+              beepCount(t.id);
+              vibrate([80, 60, 160]);
+            }
+          }
+
+          const d = new Date();
+          clock.textContent = `${pad2(d.getHours())}:${pad2(
+            d.getMinutes()
+          )}:${pad2(d.getSeconds())}`;
+        }
+
+        let loop = null;
+        function startLoop() {
+          if (loop) clearInterval(loop);
+          loop = setInterval(() => {
+            tick();
+            const anyRunning = state.timers.some((t) => t.running);
+            const anyStageDone = state.timers.some((t) => t.stageDone);
+            if (anyRunning || anyStageDone) render();
+            saveState();
+          }, 500);
+        }
+
+        // ---- Dialog: stage editor
+        function openStageDialog(idx) {
+          editingIndex = idx;
+          const t = state.timers[idx];
+          dlgTitle.textContent = `工程編集：${t.bread}（#${t.id}）`;
+          stageTbody.innerHTML = "";
+
+          const addRow = (st) => {
+            const tr = document.createElement("tr");
+            const td = document.createElement("td");
+            td.colSpan = 4;
+
+            const box = document.createElement("div");
+            box.className = "rowbox";
+
+            const name = document.createElement("input");
+            name.type = "text";
+            name.value = st?.name ?? "";
+            name.placeholder = "工程名（例：一次発酵）";
+
+            const min = document.createElement("input");
+            min.type = "number";
+            min.inputMode = "numeric";
+            min.min = "0";
+            min.max = "99";
+            min.value = String(Math.floor((st?.sec ?? 0) / 60));
+
+            const sec = document.createElement("input");
+            sec.type = "number";
+            sec.inputMode = "numeric";
+            sec.min = "0";
+            sec.max = "59";
+            sec.value = String((st?.sec ?? 0) % 60);
+
+            const del = document.createElement("button");
+            del.className = "del";
+            del.textContent = "削除";
+            del.addEventListener("click", () => {
+              tr.remove();
+            });
+
+            box.appendChild(name);
+            box.appendChild(min);
+            box.appendChild(sec);
+            box.appendChild(del);
+
+            td.appendChild(box);
+            tr.appendChild(td);
+            stageTbody.appendChild(tr);
+          };
+
+          t.stages.forEach((s) => addRow(s));
+          if (t.stages.length === 0) addRow({ name: "一次発酵", sec: 60 * 60 });
+          dlg.showModal();
+
+          addStageBtn.onclick = () => {
+            if (stageTbody.querySelectorAll("tr").length >= MAX_STAGES) return;
+            addRow({ name: "", sec: 0 });
+          };
+
+          dlgSave.onclick = () => {
+            const rows = Array.from(stageTbody.querySelectorAll(".rowbox"));
+            const stages = rows.map((r) => {
+              const inputs = r.querySelectorAll("input");
+              const nm = inputs[0].value.trim();
+              const m = clampInt(inputs[1].value, 0, 99);
+              const s = clampInt(inputs[2].value, 0, 59);
+              return { name: nm, sec: m * 60 + s };
+            });
+            const cleaned = normalizeStages(stages);
+            if (cleaned.length === 0) {
+              alert("工程が空です。最低1工程（時間>0）を設定してください。");
+              return;
+            }
+
+            const tt = state.timers[editingIndex];
+            tt.stages = cleaned;
+            tt.stageIdx = clampInt(tt.stageIdx, 0, tt.stages.length - 1);
+
+            tt.running = false;
+            tt.stageDone = false;
+            tt.lastTick = null;
+            tt.remainingSec = stageSec(tt, tt.stageIdx);
+
+            saveState();
+            render();
+            dlg.close();
+            editingIndex = null;
+          };
+        }
+
+        dlgClose.addEventListener("click", () => dlg.close());
+
+        // ---- Presets
+        function currentPresetPayload() {
+          return {
+            settings: { ...state.settings },
+            timers: state.timers.map((t) => ({
+              bread: t.bread,
+              stages: t.stages,
+            })),
+          };
+        }
+        function applyPresetPayload(p) {
+          if (p.settings) state.settings = { ...state.settings, ...p.settings };
+          if (Array.isArray(p.timers) && p.timers.length === N) {
+            p.timers.forEach((pt, i) => {
+              const t = state.timers[i];
+              t.bread = String(pt.bread ?? t.bread);
+              t.stages = normalizeStages(pt.stages);
+              if (t.stages.length === 0)
+                t.stages = normalizeStages(STAGE_TEMPLATES["ハード系（目安）"]);
+              t.stageIdx = 0;
+              t.remainingSec = stageSec(t, 0);
+              t.running = false;
+              t.stageDone = false;
+              t.lastTick = null;
+            });
+          }
+        }
+
+        // ---- Global actions
+        allStartBtn.addEventListener("click", () => {
+          ensureAudio();
+          state.timers.forEach((_, i) => startTimer(i));
+          saveState();
+          render();
+        });
+        allStopBtn.addEventListener("click", () => {
+          ensureAudio();
+          state.timers.forEach((_, i) => stopTimer(i));
+          saveState();
+          render();
+        });
+        allResetBtn.addEventListener("click", () => {
+          ensureAudio();
+          state.timers.forEach((t) => {
+            t.stageIdx = 0;
+            t.running = false;
+            t.stageDone = false;
+            t.lastTick = null;
+            t.remainingSec = stageSec(t, 0);
+          });
+          saveState();
+          render();
+        });
+
+        fullscreenBtn.addEventListener("click", async () => {
+          ensureAudio();
+          try {
+            const el = document.documentElement;
+            if (!document.fullscreenElement) {
+              await el.requestFullscreen();
+              fullscreenBtn.textContent = "全画面解除";
+            } else {
+              await document.exitFullscreen();
+              fullscreenBtn.textContent = "全画面";
+            }
+          } catch (_) {
+            statusHint.textContent = "全画面にできません（端末/ブラウザ制限）";
+          }
+        });
+
+        soundToggle.addEventListener("change", () => {
+          state.settings.sound = soundToggle.checked;
+          saveState();
+        });
+        vibeToggle.addEventListener("change", () => {
+          state.settings.vibe = vibeToggle.checked;
+          saveState();
+        });
+        toastToggle.addEventListener("change", () => {
+          state.settings.toast = toastToggle.checked;
+          saveState();
+        });
+
+        function getPresetsSafe() {
+          try {
+            return JSON.parse(localStorage.getItem(PRESET_KEY) || "{}");
+          } catch (_) {
+            return {};
+          }
+        }
+
+        savePresetBtn.addEventListener("click", () => {
+          ensureAudio();
+          const name = prompt("プリセット名（例：通常日／窯焼き日）");
+          if (!name) return;
+          const presets = getPresetsSafe();
+          presets[name] = currentPresetPayload();
+          setPresets(presets);
+          refreshPresetSelect();
+          presetSelect.value = name;
+          statusHint.textContent = `プリセット保存: ${name}`;
+        });
+
+        loadPresetBtn.addEventListener("click", () => {
+          ensureAudio();
+          const name = presetSelect.value;
+          if (!name) return;
+          const presets = getPresetsSafe();
+          const p = presets[name];
+          if (!p) return;
+          applyPresetPayload(p);
+          saveState();
+          render();
+          statusHint.textContent = `プリセット読込: ${name}`;
+        });
+
+        deletePresetBtn.addEventListener("click", () => {
+          ensureAudio();
+          const name = presetSelect.value;
+          if (!name) return;
+          if (!confirm(`プリセット「${name}」を削除しますか？`)) return;
+          const presets = getPresetsSafe();
+          delete presets[name];
+          setPresets(presets);
+          refreshPresetSelect();
+          statusHint.textContent = `プリセット削除: ${name}`;
+        });
+
+        // ---- init
+        loadState();
+        refreshPresetSelect();
+        render();
+        startLoop();
+      })();
+    </script>
+  </body>
+</html>
