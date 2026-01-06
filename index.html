@@ -756,13 +756,32 @@
         // ---- Timer control
         function startTimer(i) {
           const t = state.timers[i];
+
+          // ★工程完了（待機）中に開始を押したら「次工程へ」
+          if (t.stageDone) {
+            if (t.stageIdx < t.stages.length - 1) {
+              t.stageIdx += 1;
+              t.remainingSec = stageSec(t, t.stageIdx);
+              t.stageDone = false;
+            } else {
+              // 最終工程が終わっている場合：同工程に戻さず待機のまま
+              showToast(
+                `${t.bread}`,
+                "最終工程です（必要なら延長、またはリセット）"
+              );
+              return;
+            }
+          }
+
           const sec = stageSec(t, t.stageIdx);
           if (sec <= 0) return;
+
           if (t.remainingSec <= 0) t.remainingSec = sec;
           t.running = true;
           t.stageDone = false;
           t.lastTick = Date.now();
         }
+
         function stopTimer(i) {
           const t = state.timers[i];
           t.running = false;
@@ -824,7 +843,7 @@
           );
         }
         // ===== 長押し連続延長（+1分） =====
-        const HOLD_REPEAT_MS = 200; // 連続で加算する間隔（200ms = 1秒で+5分）
+        const HOLD_REPEAT_MS = 400; // 連続で加算する間隔（200ms = 1秒で+5分）
         const HOLD_FIRST_DELAY = 250; // 押し始めから連続開始までの遅延
 
         function startHoldExtend(buttonEl, timerIndex) {
@@ -1008,7 +1027,11 @@
 
             const startBtn = document.createElement("button");
             startBtn.className = "ok";
-            startBtn.textContent = t.running ? "停止" : "開始";
+            startBtn.textContent = t.running
+              ? "停止"
+              : t.stageDone
+              ? "次工程開始"
+              : "開始";
             startBtn.addEventListener("click", () => {
               ensureAudio();
               if (t.running) stopTimer(idx);
