@@ -633,6 +633,38 @@
             await sleep(260);
           }
         }
+        // ===== 工程完了ループ音 =====
+        let alertOsc = null;
+
+        function startAlertSound() {
+          ensureAudio();
+          if (alertOsc) return;
+
+          const ctx = audioCtx;
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+
+          osc.type = "sine";
+          osc.frequency.value = 880;
+          gain.gain.value = 0.15;
+
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+
+          osc.start();
+          alertOsc = osc;
+        }
+
+        function stopAlertSound() {
+          if (alertOsc) {
+            try {
+              alertOsc.stop();
+            } catch (e) {}
+            alertOsc = null;
+          }
+        }
+        // ===========================
+
         function vibrate(pattern) {
           if (!state.settings.vibe) return;
           if (navigator.vibrate) navigator.vibrate(pattern);
@@ -755,6 +787,7 @@
 
         // ---- Timer control
         function startTimer(i) {
+          stopAlertSound(); // ★
           const t = state.timers[i];
 
           // ★工程完了（待機）中に開始を押したら「次工程へ」
@@ -786,6 +819,7 @@
           const t = state.timers[i];
           t.running = false;
           t.lastTick = null;
+          stopAlertSound(); // ★停止で鳴動解除
         }
         function resetTimer(i) {
           const t = state.timers[i];
@@ -808,6 +842,7 @@
         // - 停止中：残りに加算（0なら延長分をセット）
         // - 工程完了（待機）：延長分をセットして自動再開（=1操作）
         function extendStage(i, addMin) {
+          stopAlertSound(); // ★
           const t = state.timers[i];
           const addSec = addMin * 60;
 
@@ -1147,12 +1182,13 @@
 
             if (t.remainingSec <= 0) {
               markStageDone(i);
+              startAlertSound(); // ★ここ（工程終了で鳴り続け開始）
 
               const title = `${t.bread}：${currentStageName(t)} 終了`;
               const sub = `#${t.id}  必要なら延長（+分）で同工程を続行`;
               showToast(title, sub);
 
-              beepCount(t.id);
+              // beepCount(t.id);
               vibrate([80, 60, 160]);
             }
           }
