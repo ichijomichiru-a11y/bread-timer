@@ -817,9 +817,15 @@
 
         function stopTimer(i) {
           const t = state.timers[i];
-          t.running = false;
-          t.lastTick = null;
-          stopAlertSound(); // ★停止で鳴動解除
+
+          // 実行中なら止める（通常停止）
+          if (t.running) {
+            t.running = false;
+            t.lastTick = null;
+          }
+
+          // ★工程終了後でも、とにかく音だけは止める
+          stopAlertSound();
         }
         function resetTimer(i) {
           const t = state.timers[i];
