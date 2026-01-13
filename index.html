@@ -663,10 +663,10 @@
           // このタイマーを「鳴動中」にする
           t.alerting = true;
 
-          // すでにループが回っていたら音ループはそのまま（ビープは共有）
+          // すでにループ中なら、新しくセットしない（ビープは共有でOK）
           if (alertTimer) return;
 
-          // すぐ1回ピッ
+          // すぐ1回ピッ（ここで必ず音が鳴るはず）
           beepCount(1);
 
           // 2秒ごとに1回ピッ
@@ -681,7 +681,7 @@
             clearInterval(alertTimer);
             alertTimer = null;
           }
-          // 全タイマーの alerting フラグを下げる
+          // 全タイマーの alerting フラグをリセット
           state.timers.forEach((t) => {
             t.alerting = false;
           });
@@ -1095,24 +1095,26 @@
 
             const startBtn = document.createElement("button");
             startBtn.className = "ok";
+
+            // ★ラベルロジック（t.alerting を見るように修正）
             startBtn.textContent = t.running
               ? "停止"
               : t.stageDone
-              ? state.alerting
+              ? t.alerting
                 ? "停止（音）"
                 : "次工程開始"
               : "開始";
             startBtn.addEventListener("click", () => {
               ensureAudio();
 
-              // ★工程終了後で鳴動中なら「音だけ止める」
-              if (t.stageDone && state.alerting) {
+              // ★工程終了後＆そのカードが鳴動中の場合 → 「音だけ止める」
+              if (t.stageDone && t.alerting) {
                 stopAlertSound();
                 render();
                 return;
               }
 
-              // 通常の開始/停止
+              // それ以外は従来どおり 開始/停止
               if (t.running) stopTimer(idx);
               else startTimer(idx);
 
@@ -1229,15 +1231,15 @@
               t.remainingSec = 0;
               markStageDone(i);
 
-              // ★このタイマーを「鳴動中」にする
+              // ★このタイマーを鳴動中にする（2秒おきピッ開始）
               startAlertSoundFor(i);
 
               const title = `${t.bread}：${currentStageName(t)} 終了`;
               const sub = `#${t.id}  必要なら延長（+分）で同工程を続行`;
               showToast(title, sub);
 
-              // 鳴動ループに統一するならここはコメントアウト推奨
-              // beepCount(t.id);
+              // ★工程ごとの瞬間ビープも残す（1回は確実に鳴らしたいので）
+              beepCount(t.id);
 
               vibrate([80, 60, 160]);
             }
