@@ -388,16 +388,17 @@
         font-size: 12px;
       }
       .card.alerting {
-        border: 3px solid #d93025;
-        animation: pulse 1.2s ease-in-out infinite;
+        border: 4px solid #d93025; /* 枠を太く */
+        background-color: rgba(217, 48, 37, 0.06); /* うっすら赤背景 */
+        animation: alertPulse 0.9s ease-in-out infinite;
       }
 
-      @keyframes pulse {
+      @keyframes alertPulse {
         0% {
           box-shadow: 0 0 0 rgba(217, 48, 37, 0);
         }
         50% {
-          box-shadow: 0 0 12px rgba(217, 48, 37, 0.6);
+          box-shadow: 0 0 18px rgba(217, 48, 37, 0.8);
         }
         100% {
           box-shadow: 0 0 0 rgba(217, 48, 37, 0);
@@ -612,6 +613,7 @@
             running: false,
             stageDone: false,
             lastTick: null,
+            alerting: false,
           });
         }
 
@@ -650,32 +652,41 @@
             await sleep(260);
           }
         }
-        // ===== 工程完了：2秒おきピッ音 =====
+        // ===== 工程完了：2秒おきピッ音（タイマー単位でフラグ管理） =====
         let alertTimer = null;
 
-        function startAlertSound() {
+        function startAlertSoundFor(index) {
           ensureAudio();
+          const t = state.timers[index];
+          if (!t) return;
+
+          // このタイマーを「鳴動中」にする
+          t.alerting = true;
+
+          // すでにループが回っていたら音ループはそのまま（ビープは共有）
           if (alertTimer) return;
 
-          state.alerting = true;
-
-          // すぐ1回鳴らす
+          // すぐ1回ピッ
           beepCount(1);
 
-          // 2秒ごとに鳴らす
+          // 2秒ごとに1回ピッ
           alertTimer = setInterval(() => {
             beepCount(1);
           }, 2000);
         }
 
         function stopAlertSound() {
+          // 音ループ停止
           if (alertTimer) {
             clearInterval(alertTimer);
             alertTimer = null;
           }
-          state.alerting = false;
+          // 全タイマーの alerting フラグを下げる
+          state.timers.forEach((t) => {
+            t.alerting = false;
+          });
         }
-        // ==================================
+        // ==========================================================
 
         function vibrate(pattern) {
           if (!state.settings.vibe) return;
@@ -945,7 +956,7 @@
               (t.running ? " running" : "") +
               (t.stageDone ? " stageDone" : "");
             // ★鳴動中カードを強調
-            if (t.stageDone && state.alerting) {
+            if (t.alerting) {
               card.classList.add("alerting");
             }
 
@@ -1215,14 +1226,19 @@
             t.lastTick += dec * 1000;
 
             if (t.remainingSec <= 0) {
+              t.remainingSec = 0;
               markStageDone(i);
-              startAlertSound(); // ★ここ（工程終了で鳴り続け開始）
+
+              // ★このタイマーを「鳴動中」にする
+              startAlertSoundFor(i);
 
               const title = `${t.bread}：${currentStageName(t)} 終了`;
               const sub = `#${t.id}  必要なら延長（+分）で同工程を続行`;
               showToast(title, sub);
 
+              // 鳴動ループに統一するならここはコメントアウト推奨
               // beepCount(t.id);
+
               vibrate([80, 60, 160]);
             }
           }
