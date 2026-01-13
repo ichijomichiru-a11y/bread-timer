@@ -637,56 +637,44 @@
 
         // ---- Audio / Vibe / Toast
         let audioCtx = null;
-
-        // Safari向け：ユーザー操作で一度起こしておけば、その後のタイマーでも鳴りやすい
         function ensureAudio() {
-          // 既に生きているコンテキストがあればそのまま使う
-          if (audioCtx && audioCtx.state !== "closed") return;
-
-          const AC = window.AudioContext || window.webkitAudioContext;
-          if (!AC) return;
-
-          audioCtx = new AC();
+          if (!audioCtx) {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if (AC) audioCtx = new AC();
+          }
+          if (audioCtx && audioCtx.state === "suspended")
+            audioCtx.resume().catch(() => {});
         }
 
-        // 短いビープを n 回鳴らす
-        function beepCount(n) {
-          if (!state.settings.sound) return; // 「音」トグルがOFFなら鳴らさない
+        function sleep(ms) {
+          return new Promise((r) => setTimeout(r, ms));
+        }
+
+        async function beepCount(count) {
+          if (!state.settings.sound) return;
           ensureAudio();
           if (!audioCtx) return;
-
-          const ctx = audioCtx;
-          const times = Math.min(4, Math.max(1, n)); // 1〜4回に制限
-          let count = 0;
-
-          function once() {
-            const osc = ctx.createOscillator();
-            const gain = ctx.createGain();
-
-            osc.type = "square";
-            osc.frequency.value = 1400; // 高めで聞こえやすい
-            gain.gain.value = 0.18;
-
-            osc.connect(gain);
-            gain.connect(ctx.destination);
-
-            const now = ctx.currentTime;
-            osc.start(now);
-            osc.stop(now + 0.12); // 0.12秒だけ鳴らす
-
-            count++;
-            if (count < times) {
-              setTimeout(once, 150); // 150ms 間隔で繰り返し
-            }
+          const times = Math.min(4, Math.max(1, count));
+          for (let k = 0; k < times; k++) {
+            const o = audioCtx.createOscillator();
+            const g = audioCtx.createGain();
+            o.type = "sine";
+            o.frequency.value = 880;
+            g.gain.value = 0.0001;
+            o.connect(g);
+            g.connect(audioCtx.destination);
+            o.start();
+            const now = audioCtx.currentTime;
+            g.gain.exponentialRampToValueAtTime(0.25, now + 0.01);
+            g.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
+            o.stop(now + 0.21);
+            await sleep(260);
           }
-
-          once();
         }
         // ===== 工程完了：2秒おきピッ音（タイマー単位でフラグ管理） =====
         let alertTimer = null;
 
         function startAlertSoundFor(index) {
-          ensureAudio();
           const t = state.timers[index];
           if (!t) return;
 
@@ -696,7 +684,7 @@
           // すでにループ中なら、新しくセットしない（ビープは共有でOK）
           if (alertTimer) return;
 
-          // すぐ1回ピッ（ここで必ず音が鳴るはず）
+          // すぐ1回ピッ（元の beepCount を使う）
           beepCount(1);
 
           // 2秒ごとに1回ピッ
@@ -716,6 +704,8 @@
             t.alerting = false;
           });
         }
+        // ==========================================================
+
         // ==========================================================
 
         function vibrate(pattern) {
@@ -1268,7 +1258,7 @@
               const sub = `#${t.id}  必要なら延長（+分）で同工程を続行`;
               showToast(title, sub);
 
-              // ★工程ごとの瞬間ビープも残す（1回は確実に鳴らしたいので）
+              // ★工程ごとの瞬間ビープ（1回ピッ）
               beepCount(t.id);
 
               vibrate([80, 60, 160]);
