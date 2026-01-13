@@ -415,6 +415,7 @@
           <button id="allStop">全停止</button>
           <button class="danger" id="allReset">全リセット</button>
           <button class="secondary" id="fullscreen">全画面</button>
+          <button id="testSound">音テスト</button>
         </div>
       </div>
 
@@ -559,6 +560,12 @@
         const toastSub = document.getElementById("toastSub");
         let toastTimer = null;
 
+        // テストボタンｊｓ
+        document.getElementById("testSound").addEventListener("click", () => {
+          // 「音」トグルがONになっている前提
+          beepCount(2); // 2回ピッと鳴る想定
+        });
+
         // ---- 工程テンプレ
         const STAGE_TEMPLATES = {
           "ハード系（目安）": [
@@ -617,40 +624,63 @@
           });
         }
 
+        document.addEventListener(
+          "pointerdown",
+          () => {
+            ensureAudio();
+            if (audioCtx && audioCtx.state === "suspended") {
+              audioCtx.resume();
+            }
+          },
+          { passive: true }
+        );
+
         // ---- Audio / Vibe / Toast
         let audioCtx = null;
+
+        // Safari向け：ユーザー操作で一度起こしておけば、その後のタイマーでも鳴りやすい
         function ensureAudio() {
-          if (!audioCtx) {
-            const AC = window.AudioContext || window.webkitAudioContext;
-            if (AC) audioCtx = new AC();
-          }
-          if (audioCtx && audioCtx.state === "suspended")
-            audioCtx.resume().catch(() => {});
-        }
-        function sleep(ms) {
-          return new Promise((r) => setTimeout(r, ms));
+          // 既に生きているコンテキストがあればそのまま使う
+          if (audioCtx && audioCtx.state !== "closed") return;
+
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (!AC) return;
+
+          audioCtx = new AC();
         }
 
-        async function beepCount(count) {
-          if (!state.settings.sound) return;
+        // 短いビープを n 回鳴らす
+        function beepCount(n) {
+          if (!state.settings.sound) return; // 「音」トグルがOFFなら鳴らさない
           ensureAudio();
           if (!audioCtx) return;
-          const times = Math.min(4, Math.max(1, count));
-          for (let k = 0; k < times; k++) {
-            const o = audioCtx.createOscillator();
-            const g = audioCtx.createGain();
-            o.type = "sine";
-            o.frequency.value = 880;
-            g.gain.value = 0.0001;
-            o.connect(g);
-            g.connect(audioCtx.destination);
-            o.start();
-            const now = audioCtx.currentTime;
-            g.gain.exponentialRampToValueAtTime(0.25, now + 0.01);
-            g.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
-            o.stop(now + 0.21);
-            await sleep(260);
+
+          const ctx = audioCtx;
+          const times = Math.min(4, Math.max(1, n)); // 1〜4回に制限
+          let count = 0;
+
+          function once() {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+
+            osc.type = "square";
+            osc.frequency.value = 1400; // 高めで聞こえやすい
+            gain.gain.value = 0.18;
+
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+
+            const now = ctx.currentTime;
+            osc.start(now);
+            osc.stop(now + 0.12); // 0.12秒だけ鳴らす
+
+            count++;
+            if (count < times) {
+              setTimeout(once, 150); // 150ms 間隔で繰り返し
+            }
           }
+
+          once();
         }
         // ===== 工程完了：2秒おきピッ音（タイマー単位でフラグ管理） =====
         let alertTimer = null;
