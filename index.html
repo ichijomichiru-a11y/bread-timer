@@ -387,6 +387,22 @@
         color: var(--muted);
         font-size: 12px;
       }
+      .card.alerting {
+        border: 3px solid #d93025;
+        animation: pulse 1.2s ease-in-out infinite;
+      }
+
+      @keyframes pulse {
+        0% {
+          box-shadow: 0 0 0 rgba(217, 48, 37, 0);
+        }
+        50% {
+          box-shadow: 0 0 12px rgba(217, 48, 37, 0.6);
+        }
+        100% {
+          box-shadow: 0 0 0 rgba(217, 48, 37, 0);
+        }
+      }
     </style>
   </head>
   <body>
@@ -634,39 +650,32 @@
             await sleep(260);
           }
         }
-        // ===== 工程完了ループ音 =====
-        let alertOsc = null;
+        // ===== 工程完了：2秒おきピッ音 =====
+        let alertTimer = null;
 
         function startAlertSound() {
           ensureAudio();
-          if (alertOsc) return;
-          state.alerting = true; // ★追加
+          if (alertTimer) return;
 
-          const ctx = audioCtx;
-          const osc = ctx.createOscillator();
-          const gain = ctx.createGain();
+          state.alerting = true;
 
-          osc.type = "sine";
-          osc.frequency.value = 880;
-          gain.gain.value = 0.15;
+          // すぐ1回鳴らす
+          beepCount(1);
 
-          osc.connect(gain);
-          gain.connect(ctx.destination);
-
-          osc.start();
-          alertOsc = osc;
+          // 2秒ごとに鳴らす
+          alertTimer = setInterval(() => {
+            beepCount(1);
+          }, 2000);
         }
 
         function stopAlertSound() {
-          if (alertOsc) {
-            try {
-              alertOsc.stop();
-            } catch (e) {}
-            alertOsc = null;
+          if (alertTimer) {
+            clearInterval(alertTimer);
+            alertTimer = null;
           }
-          state.alerting = false; // ★追加
+          state.alerting = false;
         }
-        // ===========================
+        // ==================================
 
         function vibrate(pattern) {
           if (!state.settings.vibe) return;
@@ -935,6 +944,10 @@
               "card" +
               (t.running ? " running" : "") +
               (t.stageDone ? " stageDone" : "");
+            // ★鳴動中カードを強調
+            if (t.stageDone && state.alerting) {
+              card.classList.add("alerting");
+            }
 
             const top = document.createElement("div");
             top.className = "row";
