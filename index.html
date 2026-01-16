@@ -637,13 +637,20 @@
 
         // ---- Audio / Vibe / Toast
         let audioCtx = null;
+
         function ensureAudio() {
-          if (!audioCtx) {
-            const AC = window.AudioContext || window.webkitAudioContext;
-            if (AC) audioCtx = new AC();
+          const AC = window.AudioContext || window.webkitAudioContext;
+          if (!AC) return;
+
+          // ★ audioCtx がない or すでに closed の場合は作り直す
+          if (!audioCtx || audioCtx.state === "closed") {
+            audioCtx = new AC();
           }
-          if (audioCtx && audioCtx.state === "suspended")
+
+          // ★ suspend されていたら再開
+          if (audioCtx.state === "suspended") {
             audioCtx.resume().catch(() => {});
+          }
         }
 
         function sleep(ms) {
