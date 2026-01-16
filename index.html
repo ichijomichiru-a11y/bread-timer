@@ -949,7 +949,9 @@
           const stateObj = { intervalId: null, timeoutId: null };
           buttonEl.__holdState = stateObj;
 
-          stateObj.timeoutId = setTimeout(() => {
+          stateObj.t;
+
+          imeoutId = setTimeout(() => {
             stateObj.intervalId = setInterval(() => {
               extendStage(timerIndex, 1);
               saveState();
@@ -1315,7 +1317,13 @@
             tick();
             const anyRunning = state.timers.some((t) => t.running);
             const anyStageDone = state.timers.some((t) => t.stageDone);
-            if (anyRunning || anyStageDone) render();
+
+            // ★編集中は再描画しない
+            if (!state.editing && (anyRunning || anyStageDone)) {
+              render();
+            }
+
+            // saveState はそのままでもOK（stateだけ見ている前提）
             saveState();
           }, 500);
         }
