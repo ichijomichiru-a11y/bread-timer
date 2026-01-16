@@ -1030,6 +1030,7 @@
               state.editing = false; // ★編集中フラグOFF
               t.bread = e.target.value;
               saveState();
+              state.editing = false; // ★ここを忘れない
               render(); // ★編集が終わったタイミングでだけ再描画
             });
 
@@ -1069,6 +1070,7 @@
             // ★ change の中では、最後にだけ render() を呼ぶ
             tpl.addEventListener("change", () => {
               ensureAudio();
+
               const name = tpl.value;
               if (!name) return;
 
@@ -1078,6 +1080,8 @@
                 )
               ) {
                 tpl.value = "";
+                // ここで編集モードは終了させておく
+                state.editing = false; // ★追加
                 return;
               }
 
@@ -1091,7 +1095,8 @@
 
               saveState();
 
-              // ★ この時点ではすでにフォーカスが外れているケースが多いのでOK
+              // 編集完了なので必ず false に戻す
+              state.editing = false; // ★追加
               render();
             });
 
