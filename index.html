@@ -605,8 +605,9 @@
         // ---- State
         const state = {
           settings: { sound: true, vibe: true, toast: true },
-          alerting: false, // ★追加：鳴動中フラグ
+          // alerting 関係のプロパティがあればそのままでOK
           timers: [],
+          editing: false, // ★追加：何かを編集中かどうか
         };
 
         // Safari安全な初期化
@@ -1018,6 +1019,18 @@
             const breadInput = document.createElement("input");
             breadInput.type = "text";
             breadInput.value = t.bread;
+
+            breadInput.addEventListener("focus", () => {
+              state.editing = true; // ★編集中フラグON
+            });
+
+            breadInput.addEventListener("blur", (e) => {
+              state.editing = false; // ★編集中フラグOFF
+              t.bread = e.target.value;
+              saveState();
+              render(); // ★編集が終わったタイミングでだけ再描画
+            });
+
             breadInput.placeholder = "パン名（例：カンパーニュ）";
             breadInput.addEventListener("change", () => {
               t.bread = breadInput.value.trim() || `パン ${t.id}`;
@@ -1034,16 +1047,29 @@
             opt0.value = "";
             opt0.textContent = "工程テンプレ適用";
             tpl.appendChild(opt0);
+
             Object.keys(STAGE_TEMPLATES).forEach((name) => {
               const o = document.createElement("option");
               o.value = name;
               o.textContent = name;
               tpl.appendChild(o);
             });
+
+            // ★ ここで「編集中フラグ」をON/OFF
+            tpl.addEventListener("focus", () => {
+              state.editing = true;
+            });
+
+            tpl.addEventListener("blur", () => {
+              state.editing = false;
+            });
+
+            // ★ change の中では、最後にだけ render() を呼ぶ
             tpl.addEventListener("change", () => {
               ensureAudio();
               const name = tpl.value;
               if (!name) return;
+
               if (
                 !confirm(
                   `「${t.bread}」にテンプレ「${name}」を適用しますか？（工程が上書きされます）`
@@ -1052,6 +1078,7 @@
                 tpl.value = "";
                 return;
               }
+
               t.stages = normalizeStages(STAGE_TEMPLATES[name]);
               t.stageIdx = 0;
               t.running = false;
@@ -1059,7 +1086,10 @@
               t.lastTick = null;
               t.remainingSec = stageSec(t, 0);
               tpl.value = "";
+
               saveState();
+
+              // ★ この時点ではすでにフォーカスが外れているケースが多いのでOK
               render();
             });
 
