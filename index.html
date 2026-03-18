@@ -749,14 +749,14 @@
           return arr
             .map((s) => ({
               name: String(s?.name ?? "").trim(),
-              sec: clampInt(s?.sec ?? 0, 0, 99 * 60 + 59),
+              sec: Math.max(0, Math.floor(s?.sec ?? 0)),
             }))
             .filter((s) => s.name && s.sec > 0)
             .slice(0, MAX_STAGES);
         }
         const stageSec = (t, idx) => {
           const st = t.stages[idx];
-          return st ? clampInt(st.sec ?? 0, 0, 99 * 60 + 59) : 0;
+          return st ? Math.max(0, Math.floor(st.sec ?? 0)) : 0;
         };
         const currentStageName = (t) => t.stages[t.stageIdx]?.name ?? "—";
 
@@ -792,10 +792,9 @@
                     STAGE_TEMPLATES["ハード系（目安）"]
                   );
                 t.stageIdx = clampInt(pt.stageIdx ?? 0, 0, t.stages.length - 1);
-                t.remainingSec = clampInt(
-                  pt.remainingSec ?? stageSec(t, t.stageIdx),
+                t.remainingSec = Math.max(
                   0,
-                  99 * 60 + 59
+                  Math.floor(pt.remainingSec ?? stageSec(t, t.stageIdx))
                 );
                 t.running = !!pt.running;
                 t.stageDone = !!pt.stageDone;
