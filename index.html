@@ -951,7 +951,14 @@
           const stateObj = { intervalId: null, timeoutId: null };
           buttonEl.__holdState = stateObj;
 
-          stateObj.t;
+          // まとめて正しく書き換えます
+          stateObj.timeoutId = setTimeout(() => {
+            stateObj.intervalId = setInterval(() => {
+              extendStage(timerIndex, 1);
+              saveState();
+              render();
+            }, HOLD_REPEAT_MS);
+          }, HOLD_FIRST_DELAY);
 
           imeoutId = setTimeout(() => {
             stateObj.intervalId = setInterval(() => {
@@ -976,6 +983,9 @@
 
         // ---- UI render
         function render() {
+          // 編集中（入力中）は何もしないで戻る処理を追加
+          if (state.editing) return;
+
           soundToggle.checked = !!state.settings.sound;
           vibeToggle.checked = !!state.settings.vibe;
           toastToggle.checked = !!state.settings.toast;
@@ -1025,24 +1035,18 @@
             breadInput.value = t.bread;
 
             breadInput.addEventListener("focus", () => {
-              state.editing = true; // ★編集中フラグON
+              state.editing = true; // 編集開始！
             });
 
-            breadInput.addEventListener("blur", (e) => {
-              state.editing = false; // ★編集中フラグOFF
-              t.bread = e.target.value;
+            breadInput.addEventListener("blur", () => {
+              state.editing = false; // 編集終了！
+              render(); // 画面を最新状態に更新
+            });
+
+            breadInput.addEventListener("change", (e) => {
+              t.bread = e.target.value.trim() || `パン ${t.id}`;
               saveState();
-              state.editing = false; // ★ここを忘れない
-              render(); // ★編集が終わったタイミングでだけ再描画
             });
-
-            breadInput.placeholder = "パン名（例：カンパーニュ）";
-            breadInput.addEventListener("change", () => {
-              t.bread = breadInput.value.trim() || `パン ${t.id}`;
-              saveState();
-              render();
-            });
-
             // テンプレ + 工程編集
             const templateRow = document.createElement("div");
             templateRow.className = "actions";
