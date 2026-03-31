@@ -233,13 +233,59 @@
     <script>
       (() => {
         const N = 10;
-        const LS_KEY = "breadTimer_vfinal";
+        const LS_KEY = "breadTimer_vfinal_fix";
         let audioCtx = null;
         let alertInterval = null;
 
         const state = { editing: false, timers: [] };
 
-        // データ復元
+        // --- 音声システムの改善 ---
+        function ensureAudio() {
+          try {
+            const AC = window.AudioContext || window.webkitAudioContext;
+            if (!audioCtx || audioCtx.state === "closed") {
+              audioCtx = new AC();
+            }
+            // 中断されていたら再開させる
+            if (audioCtx.state === "suspended") {
+              audioCtx.resume();
+            }
+          } catch (e) {
+            console.error("AudioContextの初期化に失敗:", e);
+          }
+        }
+
+        // 画面に戻ってきたときに音を復旧させる処理
+        document.addEventListener("visibilitychange", () => {
+          if (document.visibilityState === "visible") {
+            ensureAudio(); // 画面が見えるようになったら再開を試みる
+            checkGlobalAlert(); // アラート中なら音を再始動
+          }
+        });
+
+        // 画面のどこかを触ったときにも再開（保険）
+        document.addEventListener("pointerdown", ensureAudio, {
+          passive: true,
+        });
+
+        function beep() {
+          ensureAudio(); // 鳴らす直前にも状態確認
+          if (!audioCtx || audioCtx.state !== "running") return;
+
+          const o = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          o.connect(g);
+          g.connect(audioCtx.destination);
+          g.gain.setTargetAtTime(0.1, audioCtx.currentTime, 0.01);
+          g.gain.exponentialRampToValueAtTime(
+            0.0001,
+            audioCtx.currentTime + 0.3,
+          );
+          o.start();
+          o.stop(audioCtx.currentTime + 0.3);
+        }
+
+        // --- 以下のデータ復元やrenderなどのロジックは以前と同様 ---
         const saved = localStorage.getItem(LS_KEY);
         if (saved) {
           state.timers = JSON.parse(saved);
@@ -256,27 +302,6 @@
               alerting: false,
             });
           }
-        }
-
-        function ensureAudio() {
-          if (!audioCtx)
-            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-          if (audioCtx.state === "suspended") audioCtx.resume();
-        }
-
-        function beep() {
-          if (!audioCtx) return;
-          const o = audioCtx.createOscillator();
-          const g = audioCtx.createGain();
-          o.connect(g);
-          g.connect(audioCtx.destination);
-          g.gain.setTargetAtTime(0.1, audioCtx.currentTime, 0.01);
-          g.gain.exponentialRampToValueAtTime(
-            0.0001,
-            audioCtx.currentTime + 0.3,
-          );
-          o.start();
-          o.stop(audioCtx.currentTime + 0.3);
         }
 
         function render() {
@@ -429,12 +454,16 @@
 
         function checkGlobalAlert() {
           const any = state.timers.some((t) => t.alerting);
-          if (any && !alertInterval) {
-            beep();
-            alertInterval = setInterval(beep, 2000);
-          } else if (!any && alertInterval) {
-            clearInterval(alertInterval);
-            alertInterval = null;
+          if (any) {
+            if (!alertInterval) {
+              beep();
+              alertInterval = setInterval(beep, 2000);
+            }
+          } else {
+            if (alertInterval) {
+              clearInterval(alertInterval);
+              alertInterval = null;
+            }
           }
         }
 
