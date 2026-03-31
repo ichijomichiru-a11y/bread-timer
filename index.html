@@ -312,59 +312,57 @@
           state.timers.forEach((t, idx) => {
             const card = document.createElement("div");
             card.className = `card ${t.running ? "running" : ""} ${t.stageDone ? "stageDone" : ""} ${t.alerting ? "alerting" : ""}`;
+
             const m = Math.floor(t.remainingSec / 60);
             const s = t.remainingSec % 60;
 
             // 工程の元の設定時間を計算
             const totalM = Math.floor(t.stages[t.stageIdx].sec / 60);
 
-            // --- ここから追加：スキップボタン（次工程へ）の作成 ---
-            const skipBtn = document.createElement("button");
-            skipBtn.textContent = "次工程へ";
-            // 最終工程ならボタンを押せないようにする
-            if (t.stageIdx >= t.stages.length - 1) {
-              skipBtn.disabled = true;
-              skipBtn.style.opacity = "0.3";
-            }
-            skipBtn.onclick = () => {
-              if (
-                confirm(
-                  `「${t.stages[t.stageIdx].name}」を飛ばして、次の「${t.stages[t.stageIdx + 1].name}」に進みますか？`,
-                )
-              ) {
-                t.stageIdx++;
-                t.remainingSec = t.stages[t.stageIdx].sec;
-                t.running = false;
-                t.stageDone = false;
-                t.alerting = false;
-                checkGlobalAlert();
-                save();
-                render();
-              }
-            };
-            // --- ここまで追加 ---
+            // --- 1. メッセージと色の判定 ---
+            let statusMsg = `${t.stages[t.stageIdx].name} (${totalM}分設定)`;
+            let statusStyle = "color:var(--muted);";
 
-            // --- ボタンの表示文字を判定するロジック ---
+            if (t.alerting) {
+              // 最終工程かどうかでメッセージを変える
+              if (t.stageIdx >= t.stages.length - 1) {
+                statusMsg = "🎉 すべての工程が完了しました！";
+              } else {
+                statusMsg = "⚠️ 工程終了！作業してください";
+              }
+              statusStyle =
+                "color:var(--bad); font-weight:bold; animation: blink 1s infinite;";
+            } else if (t.stageDone) {
+              if (t.stageIdx >= t.stages.length - 1) {
+                statusMsg = "✅ 全工程クリア";
+                statusStyle = "color:var(--ok); font-weight:bold;";
+              } else {
+                statusMsg = "✅ 工程完了（待機中）";
+                statusStyle = "color:var(--warn); font-weight:bold;";
+              }
+            }
+
+            // --- 2. ボタンの文字判定 ---
             let startBtnText = "▶️ 開始";
             if (t.running) {
               startBtnText = "停止";
             } else if (t.alerting) {
               startBtnText = "🔔 音を止める";
             } else if (t.stageDone) {
-              // 最終工程が終わっているかチェック
               if (t.stageIdx >= t.stages.length - 1) {
-                startBtnText = "✅ 全工程終了";
+                startBtnText = "✅ 全工程終了"; // ここがご希望のポイントです！
               } else {
                 startBtnText = "➡️ 次工程開始";
               }
             }
 
+            // --- 3. HTMLの組み立て ---
             card.innerHTML = `
               <div class="label-row"><div class="badge">#${t.id}</div> <span>${t.stageIdx + 1} / ${t.stages.length} 工程</span></div>
               <input type="text" value="${t.bread}" class="bread-name" placeholder="パンの名前">
               
               <div style="font-size:13px; text-align:center; min-height:1.2em; ${statusStyle}">
-                ${t.alerting && t.stageIdx >= t.stages.length - 1 ? "🎉 すべての工程が完了しました！" : statusMsg}
+                ${statusMsg}
               </div>
               
               <div class="time" style="${t.alerting ? "color:var(--bad);" : ""}">${m}:${String(s).padStart(2, "0")}</div>
@@ -382,11 +380,8 @@
                 </button>
               </div>
             `;
-            // 【重要】作成したスキップボタンを「リセット」ボタンの後ろに追加します
-            const actionDiv = card.querySelector(".actions");
-            actionDiv.insertBefore(skipBtn, card.querySelector(".start-btn"));
 
-            // --- この下からは既存のイベント設定（nameInp.onfocus 等）が続きます ---            // --- 以下、イベント設定などはそのまま ---
+            // --- 4. イベント（クリック時の動き）の設定 ---
             const nameInp = card.querySelector(".bread-name");
             nameInp.onfocus = () => (state.editing = true);
             nameInp.onblur = () => {
@@ -405,11 +400,16 @@
                 checkGlobalAlert();
               } else if (t.running) {
                 t.running = false;
-              } else if (t.stageDone && t.stageIdx < t.stages.length - 1) {
-                t.stageIdx++;
-                t.remainingSec = t.stages[t.stageIdx].sec;
-                t.stageDone = false;
-                t.running = true;
+              } else if (t.stageDone) {
+                if (t.stageIdx < t.stages.length - 1) {
+                  t.stageIdx++;
+                  t.remainingSec = t.stages[t.stageIdx].sec;
+                  t.stageDone = false;
+                  t.running = true;
+                } else {
+                  // 最終工程が終わっている場合は何もしない
+                  return;
+                }
               } else {
                 t.running = true;
                 t.stageDone = false;
@@ -460,7 +460,6 @@
             grid.appendChild(card);
           });
         }
-
         const dlg = document.getElementById("stageDialog");
         let currentEditIdx = null;
 
