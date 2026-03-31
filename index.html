@@ -344,15 +344,31 @@
             };
             // --- ここまで追加 ---
 
+            // --- ボタンの表示文字を判定するロジック ---
+            let startBtnText = "▶️ 開始";
+            if (t.running) {
+              startBtnText = "停止";
+            } else if (t.alerting) {
+              startBtnText = "🔔 音を止める";
+            } else if (t.stageDone) {
+              // 最終工程が終わっているかチェック
+              if (t.stageIdx >= t.stages.length - 1) {
+                startBtnText = "✅ 全工程終了";
+              } else {
+                startBtnText = "➡️ 次工程開始";
+              }
+            }
+
             card.innerHTML = `
               <div class="label-row"><div class="badge">#${t.id}</div> <span>${t.stageIdx + 1} / ${t.stages.length} 工程</span></div>
               <input type="text" value="${t.bread}" class="bread-name" placeholder="パンの名前">
               
-              <div style="font-size:13px; color:var(--muted); text-align:center;">
-                ${t.stages[t.stageIdx].name} <span style="font-size:11px;">(${totalM}分設定)</span>
+              <div style="font-size:13px; text-align:center; min-height:1.2em; ${statusStyle}">
+                ${t.alerting && t.stageIdx >= t.stages.length - 1 ? "🎉 すべての工程が完了しました！" : statusMsg}
               </div>
               
-              <div class="time">${m}:${String(s).padStart(2, "0")}</div>
+              <div class="time" style="${t.alerting ? "color:var(--bad);" : ""}">${m}:${String(s).padStart(2, "0")}</div>
+              
               <div class="extend-actions">
                 <button class="ext-btn" data-m="5">+5分</button>
                 <button class="ext-btn" data-m="10">+10分</button>
@@ -361,12 +377,11 @@
               <div class="actions">
                 <button class="primary edit-btn">工程編集</button>
                 <button class="reset-btn">リセット</button>
-                <button class="start-btn ${t.running ? "warn" : "ok"}" style="grid-column: span 2">
-                  ${t.running ? "停止" : t.alerting ? "音を止める" : t.stageDone ? "次工程開始" : "開始"}
+                <button class="start-btn ${t.running ? "warn" : "ok"}" style="grid-column: span 2; font-size:16px;">
+                  ${startBtnText}
                 </button>
               </div>
             `;
-
             // 【重要】作成したスキップボタンを「リセット」ボタンの後ろに追加します
             const actionDiv = card.querySelector(".actions");
             actionDiv.insertBefore(skipBtn, card.querySelector(".start-btn"));
