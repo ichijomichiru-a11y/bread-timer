@@ -381,6 +381,37 @@
               </div>
             `;
 
+            // --- 追加：スキップボタン（次工程へ）の復活 ---
+            const skipBtn = document.createElement("button");
+            skipBtn.textContent = "次工程へ";
+            // 実行中、またはすでに最終工程なら押せないようにする
+            if (t.running || t.stageIdx >= t.stages.length - 1) {
+              skipBtn.disabled = true;
+              skipBtn.style.opacity = "0.3";
+            }
+            skipBtn.onclick = () => {
+              if (
+                confirm(
+                  `「${t.stages[t.stageIdx].name}」を飛ばして、次の「${t.stages[t.stageIdx + 1].name}」に進みますか？`,
+                )
+              ) {
+                t.stageIdx++;
+                t.remainingSec = t.stages[t.stageIdx].sec;
+                t.running = false;
+                t.stageDone = false;
+                t.alerting = false;
+                checkGlobalAlert();
+                save();
+                render();
+              }
+            };
+            // ボタンを「リセット」の隣に挿入
+            card
+              .querySelector(".actions")
+              .insertBefore(skipBtn, card.querySelector(".start-btn"));
+
+            // --- 4. イベント（クリック時の動き）の設定 ---
+            // (ここから下、nameInp.onfocus 等はそのまま)
             // --- 4. イベント（クリック時の動き）の設定 ---
             const nameInp = card.querySelector(".bread-name");
             nameInp.onfocus = () => (state.editing = true);
