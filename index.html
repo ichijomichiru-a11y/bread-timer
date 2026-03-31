@@ -7,8 +7,9 @@
       content="width=device-width,initial-scale=1,viewport-fit=cover"
     />
     <meta name="theme-color" content="#111111" />
-    <title>10パン工程タイマー（修正版）</title>
+    <title>10パン工程タイマー（完全復元版）</title>
     <style>
+      /* --- スタイルは最初のデザインを完全に維持 --- */
       :root {
         --bg: #0f1115;
         --card: #171a21;
@@ -22,11 +23,8 @@
         --btn2: #2b3445;
         --radius: 16px;
         --mono:
-          ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
-          "Liberation Mono", "Courier New", monospace;
-        --sans:
-          ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica,
-          Arial;
+          ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+        --sans: ui-sans-serif, system-ui, -apple-system, sans-serif;
       }
       * {
         box-sizing: border-box;
@@ -36,6 +34,7 @@
         font-family: var(--sans);
         background: linear-gradient(180deg, #0f1115, #0b0d11);
         color: var(--fg);
+        -webkit-tap-highlight-color: transparent;
       }
       header {
         position: sticky;
@@ -60,8 +59,10 @@
       .top-actions {
         display: flex;
         gap: 8px;
+        flex-wrap: wrap;
       }
       button {
+        appearance: none;
         border: 1px solid rgba(39, 48, 65, 0.9);
         background: var(--btn);
         color: var(--fg);
@@ -75,89 +76,115 @@
         background: var(--btn2);
       }
       button.ok {
-        border-color: var(--ok);
-        color: var(--ok);
+        border-color: rgba(45, 212, 191, 0.7);
       }
       button.warn {
-        border-color: var(--warn);
-        color: var(--warn);
+        border-color: rgba(251, 191, 36, 0.75);
       }
       button.danger {
-        border-color: var(--bad);
-        color: var(--bad);
+        border-color: rgba(251, 113, 133, 0.7);
       }
       main {
         padding: 14px;
       }
       .grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
         gap: 12px;
       }
       .card {
-        background: var(--card);
-        border: 1px solid var(--line);
+        background: rgba(23, 26, 33, 0.96);
+        border: 1px solid rgba(39, 48, 65, 0.9);
         border-radius: var(--radius);
-        padding: 16px;
+        padding: 14px;
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 10px;
       }
       .card.running {
         border-color: var(--ok);
       }
       .card.stageDone {
         border-color: var(--warn);
-        box-shadow: 0 0 15px rgba(251, 191, 36, 0.3);
+        box-shadow: 0 0 10px rgba(251, 191, 36, 0.2);
       }
       .card.alerting {
-        border: 2px solid var(--bad);
-        animation: pulse 1s infinite;
+        border: 3px solid #d93025;
+        animation: alertPulse 0.9s infinite;
       }
-      @keyframes pulse {
+      @keyframes alertPulse {
         0% {
-          opacity: 1;
+          box-shadow: 0 0 0 rgba(217, 48, 37, 0);
         }
         50% {
-          opacity: 0.7;
+          box-shadow: 0 0 15px rgba(217, 48, 37, 0.6);
         }
         100% {
-          opacity: 1;
+          box-shadow: 0 0 0 rgba(217, 48, 37, 0);
         }
       }
       .time {
         font-family: var(--mono);
-        font-size: 42px;
+        font-size: 34px;
         text-align: center;
-        margin: 10px 0;
       }
-      input[type="text"] {
-        width: 100%;
-        padding: 10px;
-        border-radius: 8px;
-        border: 1px solid var(--line);
-        background: #000;
-        color: #fff;
-      }
-      .actions {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 8px;
-      }
-      .extend-row {
+      .label-row {
         display: flex;
-        gap: 4px;
+        justify-content: space-between;
+        align-items: center;
       }
-      .extend-row button {
-        flex: 1;
-        padding: 6px;
+      .badge {
+        font-family: var(--mono);
         font-size: 12px;
+        color: var(--muted);
+        padding: 2px 8px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+      }
+      input[type="text"],
+      select {
+        width: 100%;
+        padding: 8px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        background: rgba(15, 21, 33, 0.6);
+        color: var(--fg);
+      }
+      .actions,
+      .extend-actions {
+        display: flex;
+        gap: 6px;
+        flex-wrap: wrap;
+      }
+      .actions button,
+      .extend-actions button {
+        flex: 1;
+        min-width: 70px;
+      }
+      dialog {
+        border: none;
+        border-radius: 18px;
+        width: 90%;
+        max-width: 600px;
+        background: #171a21;
+        color: #fff;
+        padding: 20px;
+      }
+      dialog::backdrop {
+        background: rgba(0, 0, 0, 0.7);
+      }
+      .rowbox {
+        display: grid;
+        grid-template-columns: 2fr 1fr 1fr auto;
+        gap: 8px;
+        margin-bottom: 8px;
+        align-items: center;
       }
       #clock {
-        font-family: var(--mono);
-        color: var(--muted);
         text-align: right;
         margin-top: 20px;
+        color: var(--muted);
+        font-family: var(--mono);
       }
     </style>
   </head>
@@ -166,6 +193,7 @@
       <div class="title-row">
         <h1>10パン工程タイマー</h1>
         <div class="top-actions">
+          <button class="ok" id="allStart">全開始</button>
           <button id="allStop">全停止</button>
           <button class="danger" id="allReset">全リセット</button>
         </div>
@@ -177,10 +205,26 @@
       <div id="clock">00:00:00</div>
     </main>
 
+    <dialog id="stageDialog">
+      <h3 id="dlgTitle">工程編集</h3>
+      <div id="stageInputs"></div>
+      <div
+        style="
+          margin-top: 15px;
+          display: flex;
+          gap: 10px;
+          justify-content: flex-end;
+        "
+      >
+        <button id="addStage">＋工程追加</button>
+        <button class="primary" id="dlgSave">保存して閉じる</button>
+      </div>
+    </dialog>
+
     <script>
       (() => {
         const N = 10;
-        const LS_KEY = "breadTimer_v2";
+        const LS_KEY = "breadTimer_full_v3";
         let audioCtx = null;
         let alertInterval = null;
 
@@ -189,7 +233,22 @@
           timers: [],
         };
 
-        // 初期データ作成
+        const STAGE_TEMPLATES = {
+          ハード系: [
+            { name: "一次発酵", sec: 3600 },
+            { name: "ベンチ", sec: 1200 },
+            { name: "最終発酵", sec: 2700 },
+            { name: "焼成", sec: 1500 },
+          ],
+          食パン: [
+            { name: "一次発酵", sec: 3600 },
+            { name: "ベンチ", sec: 1200 },
+            { name: "最終発酵", sec: 3600 },
+            { name: "焼成", sec: 2100 },
+          ],
+        };
+
+        // データ復元
         const saved = localStorage.getItem(LS_KEY);
         if (saved) {
           state.timers = JSON.parse(saved);
@@ -198,6 +257,8 @@
             state.timers.push({
               id: i + 1,
               bread: `パン ${i + 1}`,
+              stages: [{ name: "一次発酵", sec: 3600 }],
+              stageIdx: 0,
               remainingSec: 3600,
               running: false,
               stageDone: false,
@@ -218,24 +279,24 @@
           const g = audioCtx.createGain();
           o.connect(g);
           g.connect(audioCtx.destination);
-          g.gain.setValueAtTime(0.1, audioCtx.currentTime);
+          g.gain.setTargetAtTime(0.1, audioCtx.currentTime, 0.01);
           g.gain.exponentialRampToValueAtTime(
             0.0001,
-            audioCtx.currentTime + 0.5,
+            audioCtx.currentTime + 0.3,
           );
           o.start();
-          o.stop(audioCtx.currentTime + 0.5);
+          o.stop(audioCtx.currentTime + 0.3);
         }
 
         function startGlobalAlert() {
-          if (alertInterval) return;
-          beep();
-          alertInterval = setInterval(beep, 2000);
+          if (!alertInterval) {
+            beep();
+            alertInterval = setInterval(beep, 2000);
+          }
         }
 
         function stopGlobalAlert() {
-          const anyAlerting = state.timers.some((t) => t.alerting);
-          if (!anyAlerting && alertInterval) {
+          if (!state.timers.some((t) => t.alerting) && alertInterval) {
             clearInterval(alertInterval);
             alertInterval = null;
           }
@@ -250,34 +311,64 @@
             const card = document.createElement("div");
             card.className = `card ${t.running ? "running" : ""} ${t.stageDone ? "stageDone" : ""} ${t.alerting ? "alerting" : ""}`;
 
+            const currentStage = t.stages[t.stageIdx] || {
+              name: "---",
+              sec: 0,
+            };
             const m = Math.floor(t.remainingSec / 60);
             const s = t.remainingSec % 60;
 
             card.innerHTML = `
-              <div class="title-row"><strong>#${t.id}</strong></div>
-              <input type="text" value="${t.bread}" class="name-input">
+              <div class="label-row"><div class="badge">#${t.id}</div> <span>${t.stageIdx + 1}/${t.stages.length}</span></div>
+              <input type="text" value="${t.bread}" class="bread-name">
+              <div style="font-size:12px; color:var(--muted)">工程: <strong>${currentStage.name}</strong></div>
               <div class="time">${m}:${String(s).padStart(2, "0")}</div>
-              <div class="extend-row">
-                <button class="extend-btn" data-min="5">+5分</button>
-                <button class="extend-btn" data-min="10">+10分</button>
-                <button class="hold-btn">＋1分(長押し)</button>
+              
+              <select class="tpl-select"><option value="">テンプレ適用</option>${Object.keys(
+                STAGE_TEMPLATES,
+              )
+                .map((k) => `<option value="${k}">${k}</option>`)
+                .join("")}</select>
+              
+              <div class="extend-actions">
+                <button class="ext-btn" data-m="5">+5分</button>
+                <button class="ext-btn" data-m="10">+10分</button>
+                <button class="hold-btn">+1分(長押し)</button>
               </div>
+              
               <div class="actions">
-                <button class="start-btn ${t.running ? "warn" : "ok"}">${t.running ? "停止" : t.alerting ? "音を止める" : "開始"}</button>
+                <button class="primary edit-btn">工程編集</button>
                 <button class="reset-btn">リセット</button>
+                <button class="start-btn ${t.running ? "warn" : "ok"}" style="grid-column: span 2">
+                  ${t.running ? "停止" : t.alerting ? "音を止める" : t.stageDone ? "次工程へ" : "開始"}
+                </button>
               </div>
             `;
 
-            // イベント設定
-            const input = card.querySelector(".name-input");
-            input.onfocus = () => (state.editing = true);
-            input.onblur = () => {
+            // イベント紐付け
+            const nameInput = card.querySelector(".bread-name");
+            nameInput.onfocus = () => (state.editing = true);
+            nameInput.onblur = () => {
               state.editing = false;
               render();
             };
-            input.onchange = (e) => {
+            nameInput.onchange = (e) => {
               t.bread = e.target.value;
               save();
+            };
+
+            card.querySelector(".tpl-select").onchange = (e) => {
+              if (e.target.value && confirm("工程を上書きしますか？")) {
+                t.stages = JSON.parse(
+                  JSON.stringify(STAGE_TEMPLATES[e.target.value]),
+                );
+                t.stageIdx = 0;
+                t.remainingSec = t.stages[0].sec;
+                t.running = false;
+                t.alerting = false;
+                save();
+                render();
+              }
             };
 
             card.querySelector(".start-btn").onclick = () => {
@@ -287,6 +378,11 @@
                 stopGlobalAlert();
               } else if (t.running) {
                 t.running = false;
+              } else if (t.stageDone && t.stageIdx < t.stages.length - 1) {
+                t.stageIdx++;
+                t.remainingSec = t.stages[t.stageIdx].sec;
+                t.stageDone = false;
+                t.running = true;
               } else {
                 t.running = true;
                 t.stageDone = false;
@@ -295,47 +391,108 @@
             };
 
             card.querySelector(".reset-btn").onclick = () => {
+              t.stageIdx = 0;
+              t.remainingSec = t.stages[0].sec;
               t.running = false;
               t.alerting = false;
               t.stageDone = false;
-              t.remainingSec = 3600;
               stopGlobalAlert();
               render();
             };
 
-            card.querySelectorAll(".extend-btn").forEach((btn) => {
-              btn.onclick = () => {
-                t.remainingSec += parseInt(btn.dataset.min) * 60;
-                t.alerting = false;
-                t.stageDone = false;
+            card.querySelector(".edit-btn").onclick = () => openEditDialog(idx);
+
+            card.querySelectorAll(".ext-btn").forEach((b) => {
+              b.onclick = () => {
+                t.remainingSec += b.dataset.m * 60;
                 t.running = true;
+                t.stageDone = false;
+                t.alerting = false;
                 stopGlobalAlert();
                 render();
               };
             });
 
-            // 長押し設定
             const holdBtn = card.querySelector(".hold-btn");
-            let holdInt;
+            let hInt;
             holdBtn.onpointerdown = () => {
               ensureAudio();
               t.remainingSec += 60;
               t.running = true;
-              t.stageDone = false;
               t.alerting = false;
               stopGlobalAlert();
               render();
-              holdInt = setInterval(() => {
+              hInt = setInterval(() => {
                 t.remainingSec += 60;
                 render();
               }, 400);
             };
             holdBtn.onpointerup = holdBtn.onpointerleave = () =>
-              clearInterval(holdInt);
+              clearInterval(hInt);
 
             grid.appendChild(card);
           });
         }
+
+        // --- ダイアログ制御 ---
+        const dlg = document.getElementById("stageDialog");
+        let currentEditIdx = null;
+
+        function openEditDialog(idx) {
+          currentEditIdx = idx;
+          state.editing = true;
+          const t = state.timers[idx];
+          document.getElementById("dlgTitle").textContent =
+            `${t.bread} の工程編集`;
+          renderStageInputs();
+          dlg.showModal();
+        }
+
+        function renderStageInputs() {
+          const container = document.getElementById("stageInputs");
+          container.innerHTML = "";
+          state.timers[currentEditIdx].stages.forEach((s, i) => {
+            const div = document.createElement("div");
+            div.className = "rowbox";
+            div.innerHTML = `
+              <input type="text" value="${s.name}" class="s-name" placeholder="工程名">
+              <input type="number" value="${Math.floor(s.sec / 60)}" class="s-min" placeholder="分">
+              <input type="number" value="${s.sec % 60}" class="s-sec" placeholder="秒">
+              <button onclick="this.parentElement.remove()">×</button>
+            `;
+            container.appendChild(div);
+          });
+        }
+
+        document.getElementById("addStage").onclick = () => {
+          const div = document.createElement("div");
+          div.className = "rowbox";
+          div.innerHTML = `<input type="text" value="新工程" class="s-name"><input type="number" value="10" class="s-min"><input type="number" value="0" class="s-sec"><button onclick="this.parentElement.remove()">×</button>`;
+          document.getElementById("stageInputs").appendChild(div);
+        };
+
+        document.getElementById("dlgSave").onclick = () => {
+          const rows = document.querySelectorAll("#stageInputs .rowbox");
+          const newStages = Array.from(rows)
+            .map((r) => ({
+              name: r.querySelector(".s-name").value,
+              sec:
+                (parseInt(r.querySelector(".s-min").value) || 0) * 60 +
+                (parseInt(r.querySelector(".s-sec").value) || 0),
+            }))
+            .filter((s) => s.sec > 0);
+
+          if (newStages.length > 0) {
+            const t = state.timers[currentEditIdx];
+            t.stages = newStages;
+            t.stageIdx = 0;
+            t.remainingSec = newStages[0].sec;
+          }
+          state.editing = false;
+          save();
+          render();
+          dlg.close();
+        };
 
         function tick() {
           state.timers.forEach((t) => {
@@ -349,24 +506,31 @@
               }
             }
           });
-          const d = new Date();
-          document.getElementById("clock").textContent = d.toLocaleTimeString();
+          document.getElementById("clock").textContent =
+            new Date().toLocaleTimeString();
         }
 
-        function save() {
-          localStorage.setItem(LS_KEY, JSON.stringify(state.timers));
-        }
-
+        // --- 一括操作 ---
+        document.getElementById("allStart").onclick = () => {
+          state.timers.forEach((t, i) => {
+            if (!t.running && !t.stageDone) t.running = true;
+          });
+          render();
+        };
         document.getElementById("allStop").onclick = () => {
           state.timers.forEach((t) => (t.running = false));
           render();
         };
         document.getElementById("allReset").onclick = () => {
-          if (confirm("リセットしますか？")) {
+          if (confirm("全リセットしますか？")) {
             localStorage.clear();
             location.reload();
           }
         };
+
+        function save() {
+          localStorage.setItem(LS_KEY, JSON.stringify(state.timers));
+        }
 
         setInterval(() => {
           tick();
