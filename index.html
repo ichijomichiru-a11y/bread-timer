@@ -7,7 +7,7 @@
       content="width=device-width,initial-scale=1,viewport-fit=cover"
     />
     <meta name="theme-color" content="#111111" />
-    <title>10パン工程タイマー（延長）</title>
+    <title>10パン工程タイマー（修正版）</title>
     <style>
       :root {
         --bg: #0f1115;
@@ -26,7 +26,7 @@
           "Liberation Mono", "Courier New", monospace;
         --sans:
           ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica,
-          Arial, "Apple Color Emoji", "Segoe UI Emoji";
+          Arial;
       }
       * {
         box-sizing: border-box;
@@ -36,13 +36,12 @@
         font-family: var(--sans);
         background: linear-gradient(180deg, #0f1115, #0b0d11);
         color: var(--fg);
-        -webkit-tap-highlight-color: transparent;
       }
       header {
         position: sticky;
         top: 0;
         z-index: 10;
-        padding: 14px 14px 10px;
+        padding: 14px;
         background: rgba(15, 17, 21, 0.92);
         backdrop-filter: blur(10px);
         border-bottom: 1px solid rgba(39, 48, 65, 0.7);
@@ -57,16 +56,12 @@
       h1 {
         font-size: 18px;
         margin: 0;
-        letter-spacing: 0.02em;
       }
       .top-actions {
         display: flex;
         gap: 8px;
-        flex-wrap: wrap;
-        justify-content: flex-end;
       }
       button {
-        appearance: none;
         border: 1px solid rgba(39, 48, 65, 0.9);
         background: var(--btn);
         color: var(--fg);
@@ -76,715 +71,308 @@
         font-weight: 600;
         cursor: pointer;
       }
-      button:active {
-        transform: translateY(1px);
-      }
-      button.secondary {
-        background: transparent;
-      }
       button.primary {
         background: var(--btn2);
       }
-      button.danger {
-        border-color: rgba(251, 113, 133, 0.7);
-      }
       button.ok {
-        border-color: rgba(45, 212, 191, 0.7);
+        border-color: var(--ok);
+        color: var(--ok);
       }
       button.warn {
-        border-color: rgba(251, 191, 36, 0.75);
+        border-color: var(--warn);
+        color: var(--warn);
       }
-      .subrow {
-        margin-top: 10px;
-        display: flex;
-        gap: 10px;
-        align-items: center;
-        justify-content: space-between;
-        flex-wrap: wrap;
-        color: var(--muted);
-        font-size: 13px;
+      button.danger {
+        border-color: var(--bad);
+        color: var(--bad);
       }
-      .toggles {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-        flex-wrap: wrap;
-      }
-      .toggle {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 8px 10px;
-        border-radius: 12px;
-        border: 1px solid rgba(39, 48, 65, 0.9);
-        background: rgba(23, 26, 33, 0.5);
-      }
-      .toggle input {
-        width: 18px;
-        height: 18px;
-      }
-
       main {
         padding: 14px;
       }
       .grid {
         display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
         gap: 12px;
       }
-      @media (min-width: 920px) {
-        .grid {
-          grid-template-columns: repeat(3, minmax(0, 1fr));
-        }
-      }
-      @media (min-width: 1200px) {
-        .grid {
-          grid-template-columns: repeat(4, minmax(0, 1fr));
-        }
-      }
-
       .card {
-        background: rgba(23, 26, 33, 0.96);
-        border: 1px solid rgba(39, 48, 65, 0.9);
+        background: var(--card);
+        border: 1px solid var(--line);
         border-radius: var(--radius);
-        padding: 12px;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
+        padding: 16px;
         display: flex;
         flex-direction: column;
-        gap: 10px;
-        min-height: 292px;
+        gap: 12px;
       }
       .card.running {
-        border-color: rgba(45, 212, 191, 0.55);
+        border-color: var(--ok);
       }
       .card.stageDone {
-        border-color: rgba(251, 191, 36, 0.7);
-        box-shadow:
-          0 0 0 2px rgba(251, 191, 36, 0.18),
-          0 10px 30px rgba(0, 0, 0, 0.22);
+        border-color: var(--warn);
+        box-shadow: 0 0 15px rgba(251, 191, 36, 0.3);
       }
-
-      .row {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
+      .card.alerting {
+        border: 2px solid var(--bad);
+        animation: pulse 1s infinite;
       }
-      .label {
-        flex: 1;
-        min-width: 0;
-        font-size: 14px;
-        font-weight: 800;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-      }
-      .badge {
-        font-family: var(--mono);
-        font-size: 12px;
-        color: var(--muted);
-        padding: 4px 8px;
-        border-radius: 999px;
-        border: 1px solid rgba(39, 48, 65, 0.9);
-        background: rgba(15, 17, 21, 0.5);
-      }
-      .stage {
-        font-size: 12px;
-        color: var(--muted);
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        align-items: center;
-      }
-      .stage strong {
-        color: var(--fg);
+      @keyframes pulse {
+        0% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.7;
+        }
+        100% {
+          opacity: 1;
+        }
       }
       .time {
         font-family: var(--mono);
-        font-size: 34px;
-        letter-spacing: 0.02em;
-        line-height: 1.05;
+        font-size: 42px;
+        text-align: center;
+        margin: 10px 0;
       }
-
       input[type="text"] {
         width: 100%;
-        padding: 10px 10px;
-        border-radius: 12px;
-        border: 1px solid rgba(39, 48, 65, 0.9);
-        background: rgba(15, 17, 21, 0.6);
-        color: var(--fg);
-        font-size: 14px;
+        padding: 10px;
+        border-radius: 8px;
+        border: 1px solid var(--line);
+        background: #000;
+        color: #fff;
       }
       .actions {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-      .actions button {
-        flex: 1;
-        min-width: 96px;
-      }
-
-      .extend-actions {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-      .extend-actions button {
-        flex: 1;
-        min-width: 96px;
-      }
-
-      .preset {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-        align-items: center;
-        margin-bottom: 12px;
-      }
-      select {
-        padding: 10px 10px;
-        border-radius: 12px;
-        border: 1px solid rgba(39, 48, 65, 0.9);
-        background: rgba(15, 17, 21, 0.6);
-        color: var(--fg);
-        font-size: 14px;
-      }
-
-      .footer-actions {
-        margin-top: 14px;
-        display: flex;
-        gap: 10px;
-        flex-wrap: wrap;
-        justify-content: space-between;
-        align-items: center;
-        color: var(--muted);
-        font-size: 13px;
-      }
-
-      .queue {
-        margin-top: 12px;
-        border: 1px solid rgba(39, 48, 65, 0.9);
-        background: rgba(23, 26, 33, 0.75);
-        border-radius: 16px;
-        padding: 12px;
-      }
-      .queue h2 {
-        margin: 0 0 8px 0;
-        font-size: 13px;
-        color: var(--muted);
-        font-weight: 800;
-      }
-      .queue-list {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        font-family: var(--mono);
-        font-size: 13px;
-      }
-      .queue-item {
-        display: flex;
-        justify-content: space-between;
-        gap: 10px;
-        flex-wrap: wrap;
-        padding: 8px 10px;
-        border: 1px solid rgba(39, 48, 65, 0.75);
-        background: rgba(15, 17, 21, 0.55);
-        border-radius: 12px;
-      }
-      .queue-item span {
-        color: var(--muted);
-        font-family: var(--sans);
-        font-size: 12px;
-      }
-
-      dialog {
-        border: none;
-        border-radius: 18px;
-        width: min(760px, 94vw);
-        background: rgba(23, 26, 33, 0.98);
-        color: var(--fg);
-        box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
-        padding: 14px;
-      }
-      dialog::backdrop {
-        background: rgba(0, 0, 0, 0.55);
-      }
-      .dlg-head {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-        margin-bottom: 10px;
-      }
-      .dlg-title {
-        font-weight: 800;
-        font-size: 15px;
-      }
-      .table {
-        width: 100%;
-        border-collapse: separate;
-        border-spacing: 0 8px;
-      }
-      .table th {
-        font-size: 12px;
-        color: var(--muted);
-        text-align: left;
-        font-weight: 700;
-      }
-      .rowbox {
-        border: 1px solid rgba(39, 48, 65, 0.9);
-        background: rgba(15, 17, 21, 0.55);
-        border-radius: 14px;
-        padding: 10px;
         display: grid;
-        grid-template-columns: 1.4fr 110px 110px 86px;
+        grid-template-columns: 1fr 1fr;
         gap: 8px;
-        align-items: center;
       }
-      .rowbox input[type="number"] {
-        width: 100%;
-        padding: 10px 10px;
-        border-radius: 12px;
-        border: 1px solid rgba(39, 48, 65, 0.9);
-        background: rgba(15, 17, 21, 0.6);
-        color: var(--fg);
-        font-size: 14px;
-        font-family: var(--mono);
-      }
-      .rowbox .del {
-        border-color: rgba(251, 113, 133, 0.7);
-      }
-      .dlg-actions {
+      .extend-row {
         display: flex;
-        gap: 8px;
-        justify-content: flex-end;
-        flex-wrap: wrap;
-        margin-top: 10px;
+        gap: 4px;
       }
-      .hint {
-        opacity: 0.9;
-      }
-
-      .toast {
-        position: fixed;
-        left: 50%;
-        bottom: 18px;
-        transform: translateX(-50%);
-        background: rgba(15, 17, 21, 0.92);
-        border: 1px solid rgba(39, 48, 65, 0.9);
-        border-radius: 14px;
-        padding: 12px 14px;
-        min-width: min(520px, 92vw);
-        color: var(--fg);
-        box-shadow: 0 18px 60px rgba(0, 0, 0, 0.45);
-        display: none;
-        z-index: 999;
-      }
-      .toast strong {
-        display: block;
-        font-size: 14px;
-        margin-bottom: 4px;
-      }
-      .toast .sub {
-        color: var(--muted);
+      .extend-row button {
+        flex: 1;
+        padding: 6px;
         font-size: 12px;
       }
-      .card.alerting {
-        border: 4px solid #d93025; /* 枠を太く */
-        background-color: rgba(217, 48, 37, 0.06); /* うっすら赤背景 */
-        animation: alertPulse 0.9s ease-in-out infinite;
-      }
-
-      @keyframes alertPulse {
-        0% {
-          box-shadow: 0 0 0 rgba(217, 48, 37, 0);
-        }
-        50% {
-          box-shadow: 0 0 18px rgba(217, 48, 37, 0.8);
-        }
-        100% {
-          box-shadow: 0 0 0 rgba(217, 48, 37, 0);
-        }
+      #clock {
+        font-family: var(--mono);
+        color: var(--muted);
+        text-align: right;
+        margin-top: 20px;
       }
     </style>
   </head>
   <body>
     <header>
       <div class="title-row">
-        <h1>10パン工程タイマー（延長）</h1>
+        <h1>10パン工程タイマー</h1>
         <div class="top-actions">
-          <button class="ok" id="allStart">全開始</button>
           <button id="allStop">全停止</button>
           <button class="danger" id="allReset">全リセット</button>
-          <button class="secondary" id="fullscreen">全画面</button>
-          <button id="testSound">音テスト</button>
-        </div>
-      </div>
-
-      <div class="subrow">
-        <div class="toggles">
-          <label class="toggle"
-            ><input type="checkbox" id="soundToggle" checked />音</label
-          >
-          <label class="toggle"
-            ><input type="checkbox" id="vibeToggle" checked />バイブ</label
-          >
-          <label class="toggle"
-            ><input type="checkbox" id="toastToggle" checked />画面通知</label
-          >
-        </div>
-        <div class="hint" id="statusHint">
-          工程完了で停止。延長（+分）で同工程を再開できます。
         </div>
       </div>
     </header>
 
     <main>
-      <div class="preset">
-        <select id="presetSelect"></select>
-        <button class="primary" id="savePreset">プリセット保存</button>
-        <button id="loadPreset">読み込み</button>
-        <button class="danger" id="deletePreset">削除</button>
-      </div>
-
       <div class="grid" id="grid"></div>
-
-      <div class="queue" id="queueBox">
-        <h2>次に鳴る順（稼働中のみ）</h2>
-        <div class="queue-list" id="queueList"></div>
-      </div>
-
-      <div class="footer-actions">
-        <div>延長は「残り時間に加算」または「待機中なら延長分で再開」。</div>
-        <div id="clock"></div>
-      </div>
+      <div id="clock">00:00:00</div>
     </main>
-
-    <dialog id="stageDialog">
-      <div class="dlg-head">
-        <div class="dlg-title" id="dlgTitle">工程編集</div>
-        <button class="secondary" id="dlgClose">閉じる</button>
-      </div>
-
-      <div style="color: var(--muted); font-size: 12px; margin-bottom: 8px">
-        工程名と時間を設定（最大8工程）。時間0は無視されます。
-      </div>
-
-      <table class="table">
-        <thead>
-          <tr>
-            <th>工程名</th>
-            <th>分</th>
-            <th>秒</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="stageTbody"></tbody>
-      </table>
-
-      <div class="dlg-actions">
-        <button id="addStage">工程追加</button>
-        <button class="primary" id="dlgSave">保存</button>
-      </div>
-    </dialog>
-
-    <div class="toast" id="toast">
-      <strong id="toastTitle"></strong>
-      <div class="sub" id="toastSub"></div>
-    </div>
 
     <script>
       (() => {
-        // ===== エラー可視化 =====
-        window.addEventListener("error", (e) => {
-          console.error(e);
-        });
-
         const N = 10;
-        const MAX_STAGES = 8;
-        const LS_KEY = "breadChainTimer10_extend_v1";
-        const PRESET_KEY = "breadChainTimer10_extend_presets_v1";
-        const EXTEND_MINUTES = [5, 10, 15];
-
-        // DOM要素
-        const grid = document.getElementById("grid");
-        const clock = document.getElementById("clock");
-        const soundToggle = document.getElementById("soundToggle");
-        const vibeToggle = document.getElementById("vibeToggle");
-        const toastToggle = document.getElementById("toastToggle");
-        const presetSelect = document.getElementById("presetSelect");
-        const savePresetBtn = document.getElementById("savePreset");
-        const loadPresetBtn = document.getElementById("loadPreset");
-        const deletePresetBtn = document.getElementById("deletePreset");
-        const allStartBtn = document.getElementById("allStart");
-        const allStopBtn = document.getElementById("allStop");
-        const allResetBtn = document.getElementById("allReset");
-        const fullscreenBtn = document.getElementById("fullscreen");
-        const queueList = document.getElementById("queueList");
-        const queueBox = document.getElementById("queueBox");
-        const dlg = document.getElementById("stageDialog");
-        const dlgTitle = document.getElementById("dlgTitle");
-        const dlgClose = document.getElementById("dlgClose");
-        const dlgSave = document.getElementById("dlgSave");
-        const addStageBtn = document.getElementById("addStage");
-        const stageTbody = document.getElementById("stageTbody");
-        const toast = document.getElementById("toast");
-        const toastTitle = document.getElementById("toastTitle");
-        const toastSub = document.getElementById("toastSub");
-
-        let editingIndex = null;
-        let toastTimer = null;
-        let alertTimer = null;
+        const LS_KEY = "breadTimer_v2";
         let audioCtx = null;
-
-        // 工程テンプレ
-        const STAGE_TEMPLATES = {
-          "ハード系（目安）": [
-            { name: "一次発酵", sec: 3600 },
-            { name: "ベンチ", sec: 1200 },
-            { name: "最終発酵", sec: 2700 },
-            { name: "焼成", sec: 1500 },
-            { name: "冷却", sec: 1800 },
-          ],
-          "バゲット（目安）": [
-            { name: "一次発酵", sec: 9000 },
-            { name: "ベンチ", sec: 1800 },
-            { name: "最終発酵", sec: 2700 },
-            { name: "焼成", sec: 1320 },
-            { name: "冷却", sec: 1200 },
-          ],
-        };
+        let alertInterval = null;
 
         const state = {
-          settings: { sound: true, vibe: true, toast: true },
+          editing: false,
           timers: [],
-          editing: false, // 編集中フラグ
         };
 
-        // 初期化
-        for (let i = 0; i < N; i++) {
-          state.timers.push({
-            id: i + 1,
-            bread: "パン " + (i + 1),
-            stages: [{ name: "一次発酵", sec: 3600 }],
-            stageIdx: 0,
-            remainingSec: 3600,
-            running: false,
-            stageDone: false,
-            lastTick: null,
-            alerting: false,
-          });
+        // 初期データ作成
+        const saved = localStorage.getItem(LS_KEY);
+        if (saved) {
+          state.timers = JSON.parse(saved);
+        } else {
+          for (let i = 0; i < N; i++) {
+            state.timers.push({
+              id: i + 1,
+              bread: `パン ${i + 1}`,
+              remainingSec: 3600,
+              running: false,
+              stageDone: false,
+              alerting: false,
+            });
+          }
         }
 
-        // --- Audio Functions ---
         function ensureAudio() {
-          const AC = window.AudioContext || window.webkitAudioContext;
-          if (!AC) return;
-          if (!audioCtx || audioCtx.state === "closed") audioCtx = new AC();
+          if (!audioCtx)
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
           if (audioCtx.state === "suspended") audioCtx.resume();
         }
 
-        async function beepCount(count) {
-          if (!state.settings.sound) return;
-          ensureAudio();
+        function beep() {
           if (!audioCtx) return;
-          for (let k = 0; k < Math.min(4, count); k++) {
-            const o = audioCtx.createOscillator();
-            const g = audioCtx.createGain();
-            o.type = "sine";
-            o.frequency.value = 880;
-            g.gain.value = 0.0001;
-            o.connect(g);
-            g.connect(audioCtx.destination);
-            o.start();
-            const now = audioCtx.currentTime;
-            g.gain.exponentialRampToValueAtTime(0.25, now + 0.01);
-            g.gain.exponentialRampToValueAtTime(0.0001, now + 0.2);
-            o.stop(now + 0.21);
-            await new Promise((r) => setTimeout(r, 260));
+          const o = audioCtx.createOscillator();
+          const g = audioCtx.createGain();
+          o.connect(g);
+          g.connect(audioCtx.destination);
+          g.gain.setValueAtTime(0.1, audioCtx.currentTime);
+          g.gain.exponentialRampToValueAtTime(
+            0.0001,
+            audioCtx.currentTime + 0.5,
+          );
+          o.start();
+          o.stop(audioCtx.currentTime + 0.5);
+        }
+
+        function startGlobalAlert() {
+          if (alertInterval) return;
+          beep();
+          alertInterval = setInterval(beep, 2000);
+        }
+
+        function stopGlobalAlert() {
+          const anyAlerting = state.timers.some((t) => t.alerting);
+          if (!anyAlerting && alertInterval) {
+            clearInterval(alertInterval);
+            alertInterval = null;
           }
         }
 
-        function startAlertSoundFor(index) {
-          const t = state.timers[index];
-          if (!t) return;
-          t.alerting = true;
-          if (alertTimer) return;
-          beepCount(1);
-          alertTimer = setInterval(() => beepCount(1), 2000);
-        }
-
-        function stopAlertSound() {
-          if (alertTimer) {
-            clearInterval(alertTimer);
-            alertTimer = null;
-          }
-          state.timers.forEach((t) => (t.alerting = false));
-        }
-
-        // --- Timer Logic ---
-        function startTimer(i) {
-          stopAlertSound();
-          const t = state.timers[i];
-          if (t.stageDone) {
-            if (t.stageIdx < t.stages.length - 1) {
-              t.stageIdx++;
-              t.remainingSec = t.stages[t.stageIdx].sec;
-              t.stageDone = false;
-            } else return;
-          }
-          if (t.remainingSec <= 0) t.remainingSec = t.stages[t.stageIdx].sec;
-          t.running = true;
-          t.lastTick = Date.now();
-        }
-
-        function stopTimer(i) {
-          state.timers[i].running = false;
-          state.timers[i].lastTick = null;
-          stopAlertSound();
-        }
-
-        function extendStage(i, addMin) {
-          stopAlertSound();
-          const t = state.timers[i];
-          const addSec = addMin * 60;
-          if (t.stageDone) {
-            t.remainingSec = addSec;
-            t.stageDone = false;
-          } else {
-            t.remainingSec += addSec;
-          }
-          t.running = true;
-          t.lastTick = Date.now();
-        }
-
-        // 長押し連続延長の修正版
-        const HOLD_REPEAT_MS = 400;
-        const HOLD_FIRST_DELAY = 250;
-        function startHoldExtend(buttonEl, idx) {
-          stopHoldExtend(buttonEl);
-          extendStage(idx, 1);
-          const st = { intervalId: null, timeoutId: null };
-          buttonEl.__holdState = st;
-          st.timeoutId = setTimeout(() => {
-            st.intervalId = setInterval(() => {
-              extendStage(idx, 1);
-              render();
-            }, HOLD_REPEAT_MS);
-          }, HOLD_FIRST_DELAY);
-          render();
-        }
-        function stopHoldExtend(buttonEl) {
-          const st = buttonEl.__holdState;
-          if (st) {
-            clearTimeout(st.timeoutId);
-            clearInterval(st.intervalId);
-          }
-          buttonEl.__holdState = null;
-          saveState();
-        }
-
-        // --- UI Render ---
         function render() {
-          if (state.editing) return; // 入力中は更新しない
-
+          if (state.editing) return;
+          const grid = document.getElementById("grid");
           grid.innerHTML = "";
+
           state.timers.forEach((t, idx) => {
             const card = document.createElement("div");
             card.className = `card ${t.running ? "running" : ""} ${t.stageDone ? "stageDone" : ""} ${t.alerting ? "alerting" : ""}`;
 
-            // パン名入力
-            const breadInput = document.createElement("input");
-            breadInput.type = "text";
-            breadInput.value = t.bread;
-            breadInput.addEventListener("focus", () => (state.editing = true));
-            breadInput.addEventListener("blur", () => {
+            const m = Math.floor(t.remainingSec / 60);
+            const s = t.remainingSec % 60;
+
+            card.innerHTML = `
+              <div class="title-row"><strong>#${t.id}</strong></div>
+              <input type="text" value="${t.bread}" class="name-input">
+              <div class="time">${m}:${String(s).padStart(2, "0")}</div>
+              <div class="extend-row">
+                <button class="extend-btn" data-min="5">+5分</button>
+                <button class="extend-btn" data-min="10">+10分</button>
+                <button class="hold-btn">＋1分(長押し)</button>
+              </div>
+              <div class="actions">
+                <button class="start-btn ${t.running ? "warn" : "ok"}">${t.running ? "停止" : t.alerting ? "音を止める" : "開始"}</button>
+                <button class="reset-btn">リセット</button>
+              </div>
+            `;
+
+            // イベント設定
+            const input = card.querySelector(".name-input");
+            input.onfocus = () => (state.editing = true);
+            input.onblur = () => {
               state.editing = false;
               render();
-            });
-            breadInput.addEventListener("change", (e) => {
+            };
+            input.onchange = (e) => {
               t.bread = e.target.value;
-              saveState();
-            });
+              save();
+            };
 
-            // 開始ボタン
-            const startBtn = document.createElement("button");
-            startBtn.className = "ok";
-            startBtn.textContent = t.running
-              ? "停止"
-              : t.stageDone
-                ? t.alerting
-                  ? "音停止"
-                  : "次へ"
-                : "開始";
-            startBtn.onclick = () => {
+            card.querySelector(".start-btn").onclick = () => {
               ensureAudio();
-              if (t.alerting) stopAlertSound();
-              else if (t.running) stopTimer(idx);
-              else startTimer(idx);
+              if (t.alerting) {
+                t.alerting = false;
+                stopGlobalAlert();
+              } else if (t.running) {
+                t.running = false;
+              } else {
+                t.running = true;
+                t.stageDone = false;
+              }
               render();
             };
 
-            // ...（他ボタン等は簡略化していますが、元のロジックを維持）
-            card.innerHTML = `
-          <div class="row"><div class="label">${t.bread}</div><div class="badge">#${t.id}</div></div>
-          <div class="time">${Math.floor(t.remainingSec / 60)}:${String(t.remainingSec % 60).padStart(2, "0")}</div>
-        `;
-
-            // 実際にはここで各ボタンを appendChild していきます
-            const extendBtn = document.createElement("button");
-            extendBtn.textContent = "+1分(長押し)";
-            extendBtn.onpointerdown = () => {
-              ensureAudio();
-              startHoldExtend(extendBtn, idx);
+            card.querySelector(".reset-btn").onclick = () => {
+              t.running = false;
+              t.alerting = false;
+              t.stageDone = false;
+              t.remainingSec = 3600;
+              stopGlobalAlert();
+              render();
             };
-            extendBtn.onpointerup = () => stopHoldExtend(extendBtn);
 
-            card.appendChild(breadInput);
-            card.appendChild(extendBtn);
-            card.appendChild(startBtn);
+            card.querySelectorAll(".extend-btn").forEach((btn) => {
+              btn.onclick = () => {
+                t.remainingSec += parseInt(btn.dataset.min) * 60;
+                t.alerting = false;
+                t.stageDone = false;
+                t.running = true;
+                stopGlobalAlert();
+                render();
+              };
+            });
+
+            // 長押し設定
+            const holdBtn = card.querySelector(".hold-btn");
+            let holdInt;
+            holdBtn.onpointerdown = () => {
+              ensureAudio();
+              t.remainingSec += 60;
+              t.running = true;
+              t.stageDone = false;
+              t.alerting = false;
+              stopGlobalAlert();
+              render();
+              holdInt = setInterval(() => {
+                t.remainingSec += 60;
+                render();
+              }, 400);
+            };
+            holdBtn.onpointerup = holdBtn.onpointerleave = () =>
+              clearInterval(holdInt);
+
             grid.appendChild(card);
           });
         }
 
         function tick() {
-          const now = Date.now();
-          state.timers.forEach((t, i) => {
-            if (!t.running) return;
-            if (!t.lastTick) t.lastTick = now;
-            const diff = Math.floor((now - t.lastTick) / 1000);
-            if (diff >= 1) {
-              t.remainingSec = Math.max(0, t.remainingSec - diff);
-              t.lastTick = now;
+          state.timers.forEach((t) => {
+            if (t.running && t.remainingSec > 0) {
+              t.remainingSec--;
               if (t.remainingSec === 0) {
                 t.running = false;
                 t.stageDone = true;
-                startAlertSoundFor(i);
+                t.alerting = true;
+                startGlobalAlert();
               }
             }
           });
+          const d = new Date();
+          document.getElementById("clock").textContent = d.toLocaleTimeString();
         }
+
+        function save() {
+          localStorage.setItem(LS_KEY, JSON.stringify(state.timers));
+        }
+
+        document.getElementById("allStop").onclick = () => {
+          state.timers.forEach((t) => (t.running = false));
+          render();
+        };
+        document.getElementById("allReset").onclick = () => {
+          if (confirm("リセットしますか？")) {
+            localStorage.clear();
+            location.reload();
+          }
+        };
 
         setInterval(() => {
           tick();
-          if (!state.editing) render();
-          saveState();
-        }, 500);
-
-        // --- その他設定 ---
-        function saveState() {
-          localStorage.setItem(LS_KEY, JSON.stringify(state));
-        }
-        function loadState() {
-          const data = localStorage.getItem(LS_KEY);
-          if (data) Object.assign(state, JSON.parse(data));
-        }
-
-        document.addEventListener("pointerdown", ensureAudio, {
-          passive: true,
-        });
-        loadState();
+          render();
+          save();
+        }, 1000);
         render();
       })();
     </script>
