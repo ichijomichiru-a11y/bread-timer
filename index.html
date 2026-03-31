@@ -7,9 +7,8 @@
       content="width=device-width,initial-scale=1,viewport-fit=cover"
     />
     <meta name="theme-color" content="#111111" />
-    <title>10パン工程タイマー（完全復元版）</title>
+    <title>10パン工程タイマー（安定版）</title>
     <style>
-      /* --- スタイルは最初のデザインを完全に維持 --- */
       :root {
         --bg: #0f1115;
         --card: #171a21;
@@ -106,7 +105,6 @@
       }
       .card.stageDone {
         border-color: var(--warn);
-        box-shadow: 0 0 10px rgba(251, 191, 36, 0.2);
       }
       .card.alerting {
         border: 3px solid #d93025;
@@ -125,8 +123,9 @@
       }
       .time {
         font-family: var(--mono);
-        font-size: 34px;
+        font-size: 40px;
         text-align: center;
+        margin: 5px 0;
       }
       .label-row {
         display: flex;
@@ -142,13 +141,14 @@
         border: 1px solid var(--line);
       }
       input[type="text"],
-      select {
+      input[type="number"] {
         width: 100%;
-        padding: 8px;
+        padding: 10px;
         border-radius: 10px;
         border: 1px solid var(--line);
-        background: rgba(15, 21, 33, 0.6);
+        background: rgba(15, 21, 33, 0.8);
         color: var(--fg);
+        font-size: 16px;
       }
       .actions,
       .extend-actions {
@@ -165,19 +165,20 @@
         border: none;
         border-radius: 18px;
         width: 90%;
-        max-width: 600px;
-        background: #171a21;
+        max-width: 500px;
+        background: #1c222d;
         color: #fff;
         padding: 20px;
+        box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
       }
       dialog::backdrop {
-        background: rgba(0, 0, 0, 0.7);
+        background: rgba(0, 0, 0, 0.8);
       }
       .rowbox {
         display: grid;
         grid-template-columns: 2fr 1fr 1fr auto;
         gap: 8px;
-        margin-bottom: 8px;
+        margin-bottom: 10px;
         align-items: center;
       }
       #clock {
@@ -185,6 +186,7 @@
         margin-top: 20px;
         color: var(--muted);
         font-family: var(--mono);
+        font-size: 14px;
       }
     </style>
   </head>
@@ -193,7 +195,6 @@
       <div class="title-row">
         <h1>10パン工程タイマー</h1>
         <div class="top-actions">
-          <button class="ok" id="allStart">全開始</button>
           <button id="allStop">全停止</button>
           <button class="danger" id="allReset">全リセット</button>
         </div>
@@ -206,47 +207,37 @@
     </main>
 
     <dialog id="stageDialog">
-      <h3 id="dlgTitle">工程編集</h3>
+      <h3 id="dlgTitle" style="margin-top: 0">工程を編集</h3>
       <div id="stageInputs"></div>
       <div
         style="
-          margin-top: 15px;
+          margin-top: 20px;
           display: flex;
           gap: 10px;
-          justify-content: flex-end;
+          justify-content: space-between;
         "
       >
-        <button id="addStage">＋工程追加</button>
-        <button class="primary" id="dlgSave">保存して閉じる</button>
+        <button id="addStage">＋追加</button>
+        <div style="display: flex; gap: 10px">
+          <button
+            onclick="document.getElementById('stageDialog').close()"
+            class="secondary"
+          >
+            閉じる
+          </button>
+          <button class="primary" id="dlgSave">保存</button>
+        </div>
       </div>
     </dialog>
 
     <script>
       (() => {
         const N = 10;
-        const LS_KEY = "breadTimer_full_v3";
+        const LS_KEY = "breadTimer_vfinal";
         let audioCtx = null;
         let alertInterval = null;
 
-        const state = {
-          editing: false,
-          timers: [],
-        };
-
-        const STAGE_TEMPLATES = {
-          ハード系: [
-            { name: "一次発酵", sec: 3600 },
-            { name: "ベンチ", sec: 1200 },
-            { name: "最終発酵", sec: 2700 },
-            { name: "焼成", sec: 1500 },
-          ],
-          食パン: [
-            { name: "一次発酵", sec: 3600 },
-            { name: "ベンチ", sec: 1200 },
-            { name: "最終発酵", sec: 3600 },
-            { name: "焼成", sec: 2100 },
-          ],
-        };
+        const state = { editing: false, timers: [] };
 
         // データ復元
         const saved = localStorage.getItem(LS_KEY);
@@ -288,20 +279,6 @@
           o.stop(audioCtx.currentTime + 0.3);
         }
 
-        function startGlobalAlert() {
-          if (!alertInterval) {
-            beep();
-            alertInterval = setInterval(beep, 2000);
-          }
-        }
-
-        function stopGlobalAlert() {
-          if (!state.timers.some((t) => t.alerting) && alertInterval) {
-            clearInterval(alertInterval);
-            alertInterval = null;
-          }
-        }
-
         function render() {
           if (state.editing) return;
           const grid = document.getElementById("grid");
@@ -310,32 +287,19 @@
           state.timers.forEach((t, idx) => {
             const card = document.createElement("div");
             card.className = `card ${t.running ? "running" : ""} ${t.stageDone ? "stageDone" : ""} ${t.alerting ? "alerting" : ""}`;
-
-            const currentStage = t.stages[t.stageIdx] || {
-              name: "---",
-              sec: 0,
-            };
             const m = Math.floor(t.remainingSec / 60);
             const s = t.remainingSec % 60;
 
             card.innerHTML = `
-              <div class="label-row"><div class="badge">#${t.id}</div> <span>${t.stageIdx + 1}/${t.stages.length}</span></div>
-              <input type="text" value="${t.bread}" class="bread-name">
-              <div style="font-size:12px; color:var(--muted)">工程: <strong>${currentStage.name}</strong></div>
+              <div class="label-row"><div class="badge">#${t.id}</div> <span>${t.stageIdx + 1} / ${t.stages.length} 工程</span></div>
+              <input type="text" value="${t.bread}" class="bread-name" placeholder="パンの名前">
+              <div style="font-size:13px; color:var(--muted); text-align:center;">${t.stages[t.stageIdx].name}</div>
               <div class="time">${m}:${String(s).padStart(2, "0")}</div>
-              
-              <select class="tpl-select"><option value="">テンプレ適用</option>${Object.keys(
-                STAGE_TEMPLATES,
-              )
-                .map((k) => `<option value="${k}">${k}</option>`)
-                .join("")}</select>
-              
               <div class="extend-actions">
                 <button class="ext-btn" data-m="5">+5分</button>
                 <button class="ext-btn" data-m="10">+10分</button>
                 <button class="hold-btn">+1分(長押し)</button>
               </div>
-              
               <div class="actions">
                 <button class="primary edit-btn">工程編集</button>
                 <button class="reset-btn">リセット</button>
@@ -345,37 +309,22 @@
               </div>
             `;
 
-            // イベント紐付け
-            const nameInput = card.querySelector(".bread-name");
-            nameInput.onfocus = () => (state.editing = true);
-            nameInput.onblur = () => {
+            const nameInp = card.querySelector(".bread-name");
+            nameInp.onfocus = () => (state.editing = true);
+            nameInp.onblur = () => {
               state.editing = false;
               render();
             };
-            nameInput.onchange = (e) => {
+            nameInp.onchange = (e) => {
               t.bread = e.target.value;
               save();
-            };
-
-            card.querySelector(".tpl-select").onchange = (e) => {
-              if (e.target.value && confirm("工程を上書きしますか？")) {
-                t.stages = JSON.parse(
-                  JSON.stringify(STAGE_TEMPLATES[e.target.value]),
-                );
-                t.stageIdx = 0;
-                t.remainingSec = t.stages[0].sec;
-                t.running = false;
-                t.alerting = false;
-                save();
-                render();
-              }
             };
 
             card.querySelector(".start-btn").onclick = () => {
               ensureAudio();
               if (t.alerting) {
                 t.alerting = false;
-                stopGlobalAlert();
+                checkGlobalAlert();
               } else if (t.running) {
                 t.running = false;
               } else if (t.stageDone && t.stageIdx < t.stages.length - 1) {
@@ -396,7 +345,7 @@
               t.running = false;
               t.alerting = false;
               t.stageDone = false;
-              stopGlobalAlert();
+              checkGlobalAlert();
               render();
             };
 
@@ -408,7 +357,7 @@
                 t.running = true;
                 t.stageDone = false;
                 t.alerting = false;
-                stopGlobalAlert();
+                checkGlobalAlert();
                 render();
               };
             });
@@ -420,7 +369,7 @@
               t.remainingSec += 60;
               t.running = true;
               t.alerting = false;
-              stopGlobalAlert();
+              checkGlobalAlert();
               render();
               hInt = setInterval(() => {
                 t.remainingSec += 60;
@@ -434,54 +383,38 @@
           });
         }
 
-        // --- ダイアログ制御 ---
         const dlg = document.getElementById("stageDialog");
         let currentEditIdx = null;
 
         function openEditDialog(idx) {
           currentEditIdx = idx;
           state.editing = true;
-          const t = state.timers[idx];
-          document.getElementById("dlgTitle").textContent =
-            `${t.bread} の工程編集`;
-          renderStageInputs();
+          const container = document.getElementById("stageInputs");
+          container.innerHTML = "";
+          state.timers[idx].stages.forEach((s, i) =>
+            addStageRow(s.name, Math.floor(s.sec / 60), s.sec % 60),
+          );
           dlg.showModal();
         }
 
-        function renderStageInputs() {
-          const container = document.getElementById("stageInputs");
-          container.innerHTML = "";
-          state.timers[currentEditIdx].stages.forEach((s, i) => {
-            const div = document.createElement("div");
-            div.className = "rowbox";
-            div.innerHTML = `
-              <input type="text" value="${s.name}" class="s-name" placeholder="工程名">
-              <input type="number" value="${Math.floor(s.sec / 60)}" class="s-min" placeholder="分">
-              <input type="number" value="${s.sec % 60}" class="s-sec" placeholder="秒">
-              <button onclick="this.parentElement.remove()">×</button>
-            `;
-            container.appendChild(div);
-          });
-        }
-
-        document.getElementById("addStage").onclick = () => {
+        function addStageRow(name = "新工程", m = 10, s = 0) {
           const div = document.createElement("div");
           div.className = "rowbox";
-          div.innerHTML = `<input type="text" value="新工程" class="s-name"><input type="number" value="10" class="s-min"><input type="number" value="0" class="s-sec"><button onclick="this.parentElement.remove()">×</button>`;
+          div.innerHTML = `<input type="text" value="${name}" class="s-name"><input type="number" value="${m}" class="s-min"><input type="number" value="${s}" class="s-sec"><button onclick="this.parentElement.remove()" style="border-color:var(--bad);color:var(--bad)">×</button>`;
           document.getElementById("stageInputs").appendChild(div);
-        };
+        }
 
+        document.getElementById("addStage").onclick = () => addStageRow();
         document.getElementById("dlgSave").onclick = () => {
           const rows = document.querySelectorAll("#stageInputs .rowbox");
           const newStages = Array.from(rows)
             .map((r) => ({
-              name: r.querySelector(".s-name").value,
+              name: r.querySelector(".s-name").value || "工程",
               sec:
                 (parseInt(r.querySelector(".s-min").value) || 0) * 60 +
                 (parseInt(r.querySelector(".s-sec").value) || 0),
             }))
             .filter((s) => s.sec > 0);
-
           if (newStages.length > 0) {
             const t = state.timers[currentEditIdx];
             t.stages = newStages;
@@ -494,6 +427,17 @@
           dlg.close();
         };
 
+        function checkGlobalAlert() {
+          const any = state.timers.some((t) => t.alerting);
+          if (any && !alertInterval) {
+            beep();
+            alertInterval = setInterval(beep, 2000);
+          } else if (!any && alertInterval) {
+            clearInterval(alertInterval);
+            alertInterval = null;
+          }
+        }
+
         function tick() {
           state.timers.forEach((t) => {
             if (t.running && t.remainingSec > 0) {
@@ -502,7 +446,7 @@
                 t.running = false;
                 t.stageDone = true;
                 t.alerting = true;
-                startGlobalAlert();
+                checkGlobalAlert();
               }
             }
           });
@@ -510,13 +454,6 @@
             new Date().toLocaleTimeString();
         }
 
-        // --- 一括操作 ---
-        document.getElementById("allStart").onclick = () => {
-          state.timers.forEach((t, i) => {
-            if (!t.running && !t.stageDone) t.running = true;
-          });
-          render();
-        };
         document.getElementById("allStop").onclick = () => {
           state.timers.forEach((t) => (t.running = false));
           render();
@@ -527,7 +464,6 @@
             location.reload();
           }
         };
-
         function save() {
           localStorage.setItem(LS_KEY, JSON.stringify(state.timers));
         }
