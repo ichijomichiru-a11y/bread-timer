@@ -315,10 +315,17 @@
             const m = Math.floor(t.remainingSec / 60);
             const s = t.remainingSec % 60;
 
+            // 工程の元の設定時間を計算
+            const totalM = Math.floor(t.stages[t.stageIdx].sec / 60);
+
             card.innerHTML = `
               <div class="label-row"><div class="badge">#${t.id}</div> <span>${t.stageIdx + 1} / ${t.stages.length} 工程</span></div>
               <input type="text" value="${t.bread}" class="bread-name" placeholder="パンの名前">
-              <div style="font-size:13px; color:var(--muted); text-align:center;">${t.stages[t.stageIdx].name}</div>
+              
+              <div style="font-size:13px; color:var(--muted); text-align:center;">
+                ${t.stages[t.stageIdx].name} <span style="font-size:11px;">(${totalM}分設定)</span>
+              </div>
+              
               <div class="time">${m}:${String(s).padStart(2, "0")}</div>
               <div class="extend-actions">
                 <button class="ext-btn" data-m="5">+5分</button>
@@ -333,7 +340,7 @@
                 </button>
               </div>
             `;
-
+            // --- 以下、イベント設定などはそのまま ---
             const nameInp = card.querySelector(".bread-name");
             nameInp.onfocus = () => (state.editing = true);
             nameInp.onblur = () => {
