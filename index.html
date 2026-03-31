@@ -318,6 +318,32 @@
             // 工程の元の設定時間を計算
             const totalM = Math.floor(t.stages[t.stageIdx].sec / 60);
 
+            // --- ここから追加：スキップボタン（次工程へ）の作成 ---
+            const skipBtn = document.createElement("button");
+            skipBtn.textContent = "次工程へ";
+            // 最終工程ならボタンを押せないようにする
+            if (t.stageIdx >= t.stages.length - 1) {
+              skipBtn.disabled = true;
+              skipBtn.style.opacity = "0.3";
+            }
+            skipBtn.onclick = () => {
+              if (
+                confirm(
+                  `「${t.stages[t.stageIdx].name}」を飛ばして、次の「${t.stages[t.stageIdx + 1].name}」に進みますか？`,
+                )
+              ) {
+                t.stageIdx++;
+                t.remainingSec = t.stages[t.stageIdx].sec;
+                t.running = false;
+                t.stageDone = false;
+                t.alerting = false;
+                checkGlobalAlert();
+                save();
+                render();
+              }
+            };
+            // --- ここまで追加 ---
+
             card.innerHTML = `
               <div class="label-row"><div class="badge">#${t.id}</div> <span>${t.stageIdx + 1} / ${t.stages.length} 工程</span></div>
               <input type="text" value="${t.bread}" class="bread-name" placeholder="パンの名前">
@@ -336,11 +362,16 @@
                 <button class="primary edit-btn">工程編集</button>
                 <button class="reset-btn">リセット</button>
                 <button class="start-btn ${t.running ? "warn" : "ok"}" style="grid-column: span 2">
-                  ${t.running ? "停止" : t.alerting ? "音を止める" : t.stageDone ? "次工程へ" : "開始"}
+                  ${t.running ? "停止" : t.alerting ? "音を止める" : t.stageDone ? "次工程開始" : "開始"}
                 </button>
               </div>
             `;
-            // --- 以下、イベント設定などはそのまま ---
+
+            // 【重要】作成したスキップボタンを「リセット」ボタンの後ろに追加します
+            const actionDiv = card.querySelector(".actions");
+            actionDiv.insertBefore(skipBtn, card.querySelector(".start-btn"));
+
+            // --- この下からは既存のイベント設定（nameInp.onfocus 等）が続きます ---            // --- 以下、イベント設定などはそのまま ---
             const nameInp = card.querySelector(".bread-name");
             nameInp.onfocus = () => (state.editing = true);
             nameInp.onblur = () => {
