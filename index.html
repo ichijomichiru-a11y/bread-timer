@@ -154,7 +154,24 @@
       <div class="grid" id="grid"></div>
       <div id="clock">00:00:00</div>
     </main>
-
+    <dialog id="stageDialog">
+      <h3 id="dlgTitle" style="margin-top: 0">工程編集</h3>
+      <div id="stageInputs"></div>
+      <div
+        style="
+          margin-top: 20px;
+          display: flex;
+          gap: 10px;
+          justify-content: space-between;
+        "
+      >
+        <button id="addStage">＋工程追加</button>
+        <div style="display: flex; gap: 10px">
+          <button type="button" id="dlgCancel">閉じる</button>
+          <button class="primary" id="dlgSave">保存</button>
+        </div>
+      </div>
+    </dialog>
     <script>
       (() => {
         const N = 10;
@@ -244,25 +261,32 @@
             }
 
             card.innerHTML = `
-                        <div style="display:flex; justify-content:space-between; font-size:12px;">
-                            <span class="badge">#${t.id}</span>
-                            <span>${t.stageIdx + 1} / ${t.stages.length} 工程</span>
-                        </div>
-                        <input type="text" value="${t.bread}" class="name-in">
-                        <div style="text-align:center; font-size:13px; ${msgStyle}">${msg}</div>
-                        <div class="time" style="${t.alerting ? "color:var(--bad)" : ""}">${m}:${String(s).padStart(2, "0")}</div>
-                        <div class="actions">
-                            <button class="skip-btn" ${isLast || t.running ? "disabled" : ""}>次工程へ</button>
-                            <button class="reset-btn">リセット</button>
-                            <button class="start-btn btn-full ${t.running ? "warn" : "ok"}">
-                                ${t.running ? "停止" : t.alerting ? "🔔 音を止める" : t.stageDone ? (isLast ? "✅ 終了" : "➡️ 次工程開始") : "▶️ 開始"}
-                            </button>
-                        </div>
-                    `;
-
-            // イベント登録
+                <div style="display:flex; justify-content:space-between; font-size:12px;">
+                    <span class="badge">#${t.id}</span>
+                    <span>${t.stageIdx + 1} / ${t.stages.length} 工程</span>
+                </div>
+                <input type="text" value="${t.bread}" class="name-in">
+                <div style="text-align:center; font-size:13px; ${msgStyle}">${msg}</div>
+                <div class="time" style="${t.alerting ? "color:var(--bad)" : ""}">${m}:${String(s).padStart(2, "0")}</div>
+                <div style="display: flex; gap: 6px; margin-bottom: 8px;">
+                    <button class="ext-btn" data-m="5" style="flex:1; padding:8px; font-size:12px; border-color:var(--warn); color:var(--warn);">+5分</button>
+                    <button class="ext-btn" data-m="10" style="flex:1; padding:8px; font-size:12px; border-color:var(--warn); color:var(--warn);">+10分</button>
+                </div>
+                <div class="actions">
+                    <button class="primary edit-btn" ${t.running ? 'disabled style="opacity:0.3"' : ""}>工程編集</button>
+                    <button class="skip-btn" ${isLast || t.running ? "disabled" : ""}>次工程へ</button>
+                    <button class="reset-btn">リセット</button>
+                    <button class="start-btn btn-full ${t.running ? "warn" : "ok"}">
+                        ${t.running ? "停止" : t.alerting ? "🔔 音を止める" : t.stageDone ? (isLast ? "✅ 終了" : "➡️ 次工程開始") : "▶️ 開始"}
+                    </button>
+                </div>
+            `;
+            // イベント登録セクションに追加
+            card.querySelector(".edit-btn").onclick = () => openEditDialog(idx);
             const nameIn = card.querySelector(".name-in");
-            nameIn.onfocus = () => (state.editing = true);
+            nameIn.onfocus = () => {
+              state.editing = true;
+            };
             nameIn.onblur = () => {
               state.editing = false;
               render();
@@ -272,6 +296,43 @@
               save();
             };
 
+            // 工程編集ボタンの動き
+            const editBtn = card.querySelector(".edit-btn");
+            if (editBtn) {
+              editBtn.onclick = () => {
+                ensureAudio(); // 音声の準備
+                openEditDialog(idx); // ダイアログを開く
+              };
+            }
+
+            // スキップボタンの動き
+            const skipBtn = card.querySelector(".skip-btn");
+            if (skipBtn) {
+              skipBtn.onclick = () => {
+                if (confirm("次の工程にスキップしますか？")) {
+                  t.stageIdx++;
+                  t.remainingSec = t.stages[t.stageIdx].sec;
+                  t.running = false;
+                  t.stageDone = false;
+                  t.alerting = false;
+                  checkAlert();
+                  render();
+                }
+              };
+            }
+
+            // リセットボタンの動き
+            card.querySelector(".reset-btn").onclick = () => {
+              t.stageIdx = 0;
+              t.remainingSec = t.stages[0].sec;
+              t.running = false;
+              t.stageDone = false;
+              t.alerting = false;
+              checkAlert();
+              render();
+            };
+
+            // スタート/停止ボタンの動き
             card.querySelector(".start-btn").onclick = () => {
               ensureAudio();
               if (t.alerting) {
@@ -289,7 +350,41 @@
               checkAlert();
               render();
             };
+            card.querySelector(".start-btn").onclick = () => {
+              ensureAudio();
+              if (t.alerting) {
+                t.alerting = false;
+              } else if (t.running) {
+                t.running = false;
+              } else if (t.stageDone && !isLast) {
+                t.stageIdx++;
+                t.remainingSec = t.stages[t.stageIdx].sec;
+                t.stageDone = false;
+                t.running = true;
+              } else if (!t.stageDone) {
+                t.running = true;
+              }
+              checkAlert();
+              render();
+            };
+            // --- 追加：延長ボタンのクリックイベント ---
+            card.querySelectorAll(".ext-btn").forEach((btn) => {
+              btn.onclick = () => {
+                ensureAudio();
+                // ボタンから「5」や「10」を取得して秒に変換
+                const addSec = parseInt(btn.dataset.m) * 60;
+                t.remainingSec += addSec;
 
+                // 延長した際のルール設定
+                t.running = true; // 自動でタイマーを開始する
+                t.stageDone = false; // 「完了」の状態を解除する
+                t.alerting = false; // 鳴っている音を止める
+
+                checkAlert(); // 全体の音の状態をチェック
+                save(); // データを保存
+                render(); // 画面を更新
+              };
+            });
             card.querySelector(".skip-btn").onclick = () => {
               if (confirm("次の工程にスキップしますか？")) {
                 t.stageIdx++;
@@ -315,6 +410,80 @@
             grid.appendChild(card);
           });
         }
+
+        // --- 工程編集ダイアログの制御 ---
+        function openEditDialog(idx) {
+          currentEditIdx = idx;
+          state.editing = true; // タイマー更新を一時停止
+
+          const t = state.timers[idx];
+          const container = document.getElementById("stageInputs");
+          container.innerHTML = "";
+
+          // 現在の工程を画面に並べる
+          t.stages.forEach((s, i) =>
+            addStageRow(s.name, Math.floor(s.sec / 60), s.sec % 60),
+          );
+
+          document.getElementById("dlgTitle").textContent =
+            `${t.bread} の工程編集`;
+          document.getElementById("stageDialog").showModal();
+        }
+
+        function addStageRow(name = "新工程", m = 10, s = 0) {
+          const div = document.createElement("div");
+          div.className = "rowbox";
+          div.style =
+            "display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 8px; margin-bottom: 10px;";
+          div.innerHTML = `
+                    <input type="text" value="${name}" class="s-name" style="width:100%">
+                    <input type="number" value="${m}" class="s-min" style="width:100%">
+                    <input type="number" value="${s}" class="s-sec" style="width:100%">
+                    <button onclick="this.parentElement.remove()" style="color:var(--bad)">×</button>
+                `;
+          document.getElementById("stageInputs").appendChild(div);
+        }
+
+        // 保存ボタンの処理
+        document.getElementById("dlgSave").onclick = () => {
+          const rows = document.querySelectorAll("#stageInputs .rowbox");
+          const newStages = Array.from(rows)
+            .map((r) => ({
+              name: r.querySelector(".s-name").value || "工程",
+              sec:
+                (parseInt(r.querySelector(".s-min").value) || 0) * 60 +
+                (parseInt(r.querySelector(".s-sec").value) || 0),
+            }))
+            .filter((s) => s.sec > 0);
+
+          if (newStages.length > 0) {
+            const t = state.timers[currentEditIdx];
+            t.stages = newStages;
+            t.stageIdx = 0;
+            t.remainingSec = newStages[0].sec;
+            t.running = false;
+            t.stageDone = false;
+            t.alerting = false;
+          }
+
+          save();
+          render();
+        };
+
+        document.getElementById("addStage").onclick = () => addStageRow();
+
+        document.getElementById("dlgCancel").onclick = () => {
+          state.editing = false;
+          document.getElementById("stageDialog").close();
+          render();
+        };
+
+        // --- ここに「閉じる」ボタンの処理を追加します ---
+        document.getElementById("dlgCancel").onclick = () => {
+          state.editing = false; // 編集モードを解除
+          document.getElementById("stageDialog").close(); // ダイアログを閉じる
+          render(); // 画面を更新してタイマー描画を再開
+        };
 
         function tick() {
           state.timers.forEach((t) => {
