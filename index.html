@@ -6,7 +6,6 @@
       name="viewport"
       content="width=device-width,initial-scale=1,viewport-fit=cover"
     />
-    <meta name="theme-color" content="#111111" />
     <title>10パン工程タイマー（安定版）</title>
     <style>
       :root {
@@ -23,15 +22,14 @@
         --radius: 16px;
         --mono:
           ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-        --sans: ui-sans-serif, system-ui, -apple-system, sans-serif;
       }
       * {
         box-sizing: border-box;
       }
       body {
         margin: 0;
-        font-family: var(--sans);
-        background: linear-gradient(180deg, #0f1115, #0b0d11);
+        font-family: sans-serif;
+        background: var(--bg);
         color: var(--fg);
         -webkit-tap-highlight-color: transparent;
       }
@@ -40,48 +38,18 @@
         top: 0;
         z-index: 10;
         padding: 14px;
-        background: rgba(15, 17, 21, 0.92);
+        background: rgba(15, 21, 21, 0.9);
         backdrop-filter: blur(10px);
-        border-bottom: 1px solid rgba(39, 48, 65, 0.7);
+        border-bottom: 1px solid var(--line);
       }
       .title-row {
         display: flex;
-        gap: 10px;
-        align-items: center;
         justify-content: space-between;
-        flex-wrap: wrap;
+        align-items: center;
       }
       h1 {
         font-size: 18px;
         margin: 0;
-      }
-      .top-actions {
-        display: flex;
-        gap: 8px;
-        flex-wrap: wrap;
-      }
-      button {
-        appearance: none;
-        border: 1px solid rgba(39, 48, 65, 0.9);
-        background: var(--btn);
-        color: var(--fg);
-        padding: 10px 12px;
-        border-radius: 12px;
-        font-size: 14px;
-        font-weight: 600;
-        cursor: pointer;
-      }
-      button.primary {
-        background: var(--btn2);
-      }
-      button.ok {
-        border-color: rgba(45, 212, 191, 0.7);
-      }
-      button.warn {
-        border-color: rgba(251, 191, 36, 0.75);
-      }
-      button.danger {
-        border-color: rgba(251, 113, 133, 0.7);
       }
       main {
         padding: 14px;
@@ -92,8 +60,8 @@
         gap: 12px;
       }
       .card {
-        background: rgba(23, 26, 33, 0.96);
-        border: 1px solid rgba(39, 48, 65, 0.9);
+        background: var(--card);
+        border: 1px solid var(--line);
         border-radius: var(--radius);
         padding: 14px;
         display: flex;
@@ -107,18 +75,16 @@
         border-color: var(--warn);
       }
       .card.alerting {
-        border: 3px solid #d93025;
-        animation: alertPulse 0.9s infinite;
+        border: 3px solid var(--bad);
+        animation: pulse 0.9s infinite;
       }
-      @keyframes alertPulse {
-        0% {
-          box-shadow: 0 0 0 rgba(217, 48, 37, 0);
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
         }
         50% {
-          box-shadow: 0 0 15px rgba(217, 48, 37, 0.6);
-        }
-        100% {
-          box-shadow: 0 0 0 rgba(217, 48, 37, 0);
+          opacity: 0.7;
         }
       }
       .time {
@@ -127,66 +93,53 @@
         text-align: center;
         margin: 5px 0;
       }
-      .label-row {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-      }
-      .badge {
-        font-family: var(--mono);
-        font-size: 12px;
-        color: var(--muted);
-        padding: 2px 8px;
-        border-radius: 10px;
-        border: 1px solid var(--line);
-      }
-      input[type="text"],
-      input[type="number"] {
+      input[type="text"] {
         width: 100%;
         padding: 10px;
         border-radius: 10px;
         border: 1px solid var(--line);
-        background: rgba(15, 21, 33, 0.8);
-        color: var(--fg);
+        background: #000;
+        color: #fff;
         font-size: 16px;
       }
-      .actions,
-      .extend-actions {
-        display: flex;
-        gap: 6px;
-        flex-wrap: wrap;
-      }
-      .actions button,
-      .extend-actions button {
-        flex: 1;
-        min-width: 70px;
-      }
-      dialog {
-        border: none;
-        border-radius: 18px;
-        width: 90%;
-        max-width: 500px;
-        background: #1c222d;
-        color: #fff;
-        padding: 20px;
-        box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
-      }
-      dialog::backdrop {
-        background: rgba(0, 0, 0, 0.8);
-      }
-      .rowbox {
+      .actions {
         display: grid;
-        grid-template-columns: 2fr 1fr 1fr auto;
+        grid-template-columns: 1fr 1fr;
         gap: 8px;
-        margin-bottom: 10px;
-        align-items: center;
+      }
+      .btn-full {
+        grid-column: span 2;
+        font-size: 16px;
+      }
+      button {
+        border: 1px solid var(--line);
+        background: var(--btn);
+        color: var(--fg);
+        padding: 12px;
+        border-radius: 12px;
+        font-weight: bold;
+        cursor: pointer;
+      }
+      button:disabled {
+        opacity: 0.3;
+        cursor: not-allowed;
+      }
+      .ok {
+        border-color: var(--ok);
+        color: var(--ok);
+      }
+      .warn {
+        border-color: var(--warn);
+        color: var(--warn);
+      }
+      .primary {
+        background: var(--btn2);
       }
       #clock {
         text-align: right;
-        margin-top: 20px;
+        padding: 10px;
         color: var(--muted);
         font-family: var(--mono);
-        font-size: 14px;
       }
     </style>
   </head>
@@ -194,84 +147,54 @@
     <header>
       <div class="title-row">
         <h1>10パン工程タイマー</h1>
-        <div class="top-actions">
-          <button id="allStop">全停止</button>
-          <button class="danger" id="allReset">全リセット</button>
-        </div>
+        <button id="allReset" style="color: var(--bad)">全リセット</button>
       </div>
     </header>
-
     <main>
       <div class="grid" id="grid"></div>
       <div id="clock">00:00:00</div>
     </main>
 
-    <dialog id="stageDialog">
-      <h3 id="dlgTitle" style="margin-top: 0">工程を編集</h3>
-      <div id="stageInputs"></div>
-      <div
-        style="
-          margin-top: 20px;
-          display: flex;
-          gap: 10px;
-          justify-content: space-between;
-        "
-      >
-        <button id="addStage">＋追加</button>
-        <div style="display: flex; gap: 10px">
-          <button
-            onclick="document.getElementById('stageDialog').close()"
-            class="secondary"
-          >
-            閉じる
-          </button>
-          <button class="primary" id="dlgSave">保存</button>
-        </div>
-      </div>
-    </dialog>
-
     <script>
       (() => {
         const N = 10;
-        const LS_KEY = "breadTimer_vfinal_fix";
+        const LS_KEY = "breadTimer_stable_v1";
         let audioCtx = null;
         let alertInterval = null;
-
         const state = { editing: false, timers: [] };
 
-        // --- 音声システムの改善 ---
-        function ensureAudio() {
-          try {
-            const AC = window.AudioContext || window.webkitAudioContext;
-            if (!audioCtx || audioCtx.state === "closed") {
-              audioCtx = new AC();
-            }
-            // 中断されていたら再開させる
-            if (audioCtx.state === "suspended") {
-              audioCtx.resume();
-            }
-          } catch (e) {
-            console.error("AudioContextの初期化に失敗:", e);
+        // 初期データロード
+        const saved = localStorage.getItem(LS_KEY);
+        if (saved) {
+          state.timers = JSON.parse(saved);
+        } else {
+          for (let i = 0; i < N; i++) {
+            state.timers.push({
+              id: i + 1,
+              bread: `パン ${i + 1}`,
+              stages: [
+                { name: "一次発酵", sec: 3600 },
+                { name: "ベンチ", sec: 1200 },
+                { name: "最終発酵", sec: 3000 },
+              ],
+              stageIdx: 0,
+              remainingSec: 3600,
+              running: false,
+              stageDone: false,
+              alerting: false,
+            });
           }
         }
 
-        // 画面に戻ってきたときに音を復旧させる処理
-        document.addEventListener("visibilitychange", () => {
-          if (document.visibilityState === "visible") {
-            ensureAudio(); // 画面が見えるようになったら再開を試みる
-            checkGlobalAlert(); // アラート中なら音を再始動
-          }
-        });
-
-        // 画面のどこかを触ったときにも再開（保険）
-        document.addEventListener("pointerdown", ensureAudio, {
-          passive: true,
-        });
+        function ensureAudio() {
+          if (!audioCtx || audioCtx.state === "closed")
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+          if (audioCtx.state === "suspended") audioCtx.resume();
+        }
 
         function beep() {
-          ensureAudio(); // 鳴らす直前にも状態確認
+          ensureAudio();
           if (!audioCtx || audioCtx.state !== "running") return;
-
           const o = audioCtx.createOscillator();
           const g = audioCtx.createGain();
           o.connect(g);
@@ -285,22 +208,12 @@
           o.stop(audioCtx.currentTime + 0.3);
         }
 
-        // --- 以下のデータ復元やrenderなどのロジックは以前と同様 ---
-        const saved = localStorage.getItem(LS_KEY);
-        if (saved) {
-          state.timers = JSON.parse(saved);
-        } else {
-          for (let i = 0; i < N; i++) {
-            state.timers.push({
-              id: i + 1,
-              bread: `パン ${i + 1}`,
-              stages: [{ name: "一次発酵", sec: 3600 }],
-              stageIdx: 0,
-              remainingSec: 3600,
-              running: false,
-              stageDone: false,
-              alerting: false,
-            });
+        function checkAlert() {
+          const any = state.timers.some((t) => t.alerting);
+          if (any && !alertInterval) alertInterval = setInterval(beep, 2000);
+          if (!any && alertInterval) {
+            clearInterval(alertInterval);
+            alertInterval = null;
           }
         }
 
@@ -315,111 +228,46 @@
 
             const m = Math.floor(t.remainingSec / 60);
             const s = t.remainingSec % 60;
+            const isLast = t.stageIdx >= t.stages.length - 1;
 
-            // 工程の元の設定時間を計算
-            const totalM = Math.floor(t.stages[t.stageIdx].sec / 60);
-
-            // --- 1. メッセージと色の判定 ---
-            let statusMsg = `${t.stages[t.stageIdx].name} (${totalM}分設定)`;
-            let statusStyle = "color:var(--muted);";
-
+            // メッセージ判定
+            let msg = `${t.stages[t.stageIdx].name} (${Math.floor(t.stages[t.stageIdx].sec / 60)}分設定)`;
+            let msgStyle = "color:var(--muted)";
             if (t.alerting) {
-              // 最終工程かどうかでメッセージを変える
-              if (t.stageIdx >= t.stages.length - 1) {
-                statusMsg = "🎉 すべての工程が完了しました！";
-              } else {
-                statusMsg = "⚠️ 工程終了！作業してください";
-              }
-              statusStyle =
-                "color:var(--bad); font-weight:bold; animation: blink 1s infinite;";
+              msg = isLast
+                ? "🎉 全工程完了！"
+                : "⚠️ 工程終了！作業してください";
+              msgStyle = "color:var(--bad); font-weight:bold;";
             } else if (t.stageDone) {
-              if (t.stageIdx >= t.stages.length - 1) {
-                statusMsg = "✅ 全工程クリア";
-                statusStyle = "color:var(--ok); font-weight:bold;";
-              } else {
-                statusMsg = "✅ 工程完了（待機中）";
-                statusStyle = "color:var(--warn); font-weight:bold;";
-              }
+              msg = isLast ? "✅ 全工程クリア" : "✅ 工程完了（待機中）";
+              msgStyle = "color:var(--ok); font-weight:bold;";
             }
 
-            // --- 2. ボタンの文字判定 ---
-            let startBtnText = "▶️ 開始";
-            if (t.running) {
-              startBtnText = "停止";
-            } else if (t.alerting) {
-              startBtnText = "🔔 音を止める";
-            } else if (t.stageDone) {
-              if (t.stageIdx >= t.stages.length - 1) {
-                startBtnText = "✅ 全工程終了"; // ここがご希望のポイントです！
-              } else {
-                startBtnText = "➡️ 次工程開始";
-              }
-            }
-
-            // --- 3. HTMLの組み立て ---
             card.innerHTML = `
-              <div class="label-row"><div class="badge">#${t.id}</div> <span>${t.stageIdx + 1} / ${t.stages.length} 工程</span></div>
-              <input type="text" value="${t.bread}" class="bread-name" placeholder="パンの名前">
-              
-              <div style="font-size:13px; text-align:center; min-height:1.2em; ${statusStyle}">
-                ${statusMsg}
-              </div>
-              
-              <div class="time" style="${t.alerting ? "color:var(--bad);" : ""}">${m}:${String(s).padStart(2, "0")}</div>
-              
-              <div class="extend-actions">
-                <button class="ext-btn" data-m="5">+5分</button>
-                <button class="ext-btn" data-m="10">+10分</button>
-                <button class="hold-btn">+1分(長押し)</button>
-              </div>
-              <div class="actions">
-                <button class="primary edit-btn">工程編集</button>
-                <button class="reset-btn">リセット</button>
-                <button class="start-btn ${t.running ? "warn" : "ok"}" style="grid-column: span 2; font-size:16px;">
-                  ${startBtnText}
-                </button>
-              </div>
-            `;
+                        <div style="display:flex; justify-content:space-between; font-size:12px;">
+                            <span class="badge">#${t.id}</span>
+                            <span>${t.stageIdx + 1} / ${t.stages.length} 工程</span>
+                        </div>
+                        <input type="text" value="${t.bread}" class="name-in">
+                        <div style="text-align:center; font-size:13px; ${msgStyle}">${msg}</div>
+                        <div class="time" style="${t.alerting ? "color:var(--bad)" : ""}">${m}:${String(s).padStart(2, "0")}</div>
+                        <div class="actions">
+                            <button class="skip-btn" ${isLast || t.running ? "disabled" : ""}>次工程へ</button>
+                            <button class="reset-btn">リセット</button>
+                            <button class="start-btn btn-full ${t.running ? "warn" : "ok"}">
+                                ${t.running ? "停止" : t.alerting ? "🔔 音を止める" : t.stageDone ? (isLast ? "✅ 終了" : "➡️ 次工程開始") : "▶️ 開始"}
+                            </button>
+                        </div>
+                    `;
 
-            // --- 追加：スキップボタン（次工程へ）の復活 ---
-            const skipBtn = document.createElement("button");
-            skipBtn.textContent = "次工程へ";
-            // 実行中、またはすでに最終工程なら押せないようにする
-            if (t.running || t.stageIdx >= t.stages.length - 1) {
-              skipBtn.disabled = true;
-              skipBtn.style.opacity = "0.3";
-            }
-            skipBtn.onclick = () => {
-              if (
-                confirm(
-                  `「${t.stages[t.stageIdx].name}」を飛ばして、次の「${t.stages[t.stageIdx + 1].name}」に進みますか？`,
-                )
-              ) {
-                t.stageIdx++;
-                t.remainingSec = t.stages[t.stageIdx].sec;
-                t.running = false;
-                t.stageDone = false;
-                t.alerting = false;
-                checkGlobalAlert();
-                save();
-                render();
-              }
-            };
-            // ボタンを「リセット」の隣に挿入
-            card
-              .querySelector(".actions")
-              .insertBefore(skipBtn, card.querySelector(".start-btn"));
-
-            // --- 4. イベント（クリック時の動き）の設定 ---
-            // (ここから下、nameInp.onfocus 等はそのまま)
-            // --- 4. イベント（クリック時の動き）の設定 ---
-            const nameInp = card.querySelector(".bread-name");
-            nameInp.onfocus = () => (state.editing = true);
-            nameInp.onblur = () => {
+            // イベント登録
+            const nameIn = card.querySelector(".name-in");
+            nameIn.onfocus = () => (state.editing = true);
+            nameIn.onblur = () => {
               state.editing = false;
               render();
             };
-            nameInp.onchange = (e) => {
+            nameIn.onchange = (e) => {
               t.bread = e.target.value;
               save();
             };
@@ -428,126 +276,44 @@
               ensureAudio();
               if (t.alerting) {
                 t.alerting = false;
-                checkGlobalAlert();
               } else if (t.running) {
                 t.running = false;
-              } else if (t.stageDone) {
-                if (t.stageIdx < t.stages.length - 1) {
-                  t.stageIdx++;
-                  t.remainingSec = t.stages[t.stageIdx].sec;
-                  t.stageDone = false;
-                  t.running = true;
-                } else {
-                  // 最終工程が終わっている場合は何もしない
-                  return;
-                }
-              } else {
-                t.running = true;
+              } else if (t.stageDone && !isLast) {
+                t.stageIdx++;
+                t.remainingSec = t.stages[t.stageIdx].sec;
                 t.stageDone = false;
+                t.running = true;
+              } else if (!t.stageDone) {
+                t.running = true;
               }
+              checkAlert();
               render();
+            };
+
+            card.querySelector(".skip-btn").onclick = () => {
+              if (confirm("次の工程にスキップしますか？")) {
+                t.stageIdx++;
+                t.remainingSec = t.stages[t.stageIdx].sec;
+                t.running = false;
+                t.stageDone = false;
+                t.alerting = false;
+                checkAlert();
+                render();
+              }
             };
 
             card.querySelector(".reset-btn").onclick = () => {
               t.stageIdx = 0;
               t.remainingSec = t.stages[0].sec;
               t.running = false;
-              t.alerting = false;
               t.stageDone = false;
-              checkGlobalAlert();
-              render();
-            };
-
-            card.querySelector(".edit-btn").onclick = () => openEditDialog(idx);
-
-            card.querySelectorAll(".ext-btn").forEach((b) => {
-              b.onclick = () => {
-                t.remainingSec += b.dataset.m * 60;
-                t.running = true;
-                t.stageDone = false;
-                t.alerting = false;
-                checkGlobalAlert();
-                render();
-              };
-            });
-
-            const holdBtn = card.querySelector(".hold-btn");
-            let hInt;
-            holdBtn.onpointerdown = () => {
-              ensureAudio();
-              t.remainingSec += 60;
-              t.running = true;
               t.alerting = false;
-              checkGlobalAlert();
+              checkAlert();
               render();
-              hInt = setInterval(() => {
-                t.remainingSec += 60;
-                render();
-              }, 400);
             };
-            holdBtn.onpointerup = holdBtn.onpointerleave = () =>
-              clearInterval(hInt);
 
             grid.appendChild(card);
           });
-        }
-        const dlg = document.getElementById("stageDialog");
-        let currentEditIdx = null;
-
-        function openEditDialog(idx) {
-          currentEditIdx = idx;
-          state.editing = true;
-          const container = document.getElementById("stageInputs");
-          container.innerHTML = "";
-          state.timers[idx].stages.forEach((s, i) =>
-            addStageRow(s.name, Math.floor(s.sec / 60), s.sec % 60),
-          );
-          dlg.showModal();
-        }
-
-        function addStageRow(name = "新工程", m = 10, s = 0) {
-          const div = document.createElement("div");
-          div.className = "rowbox";
-          div.innerHTML = `<input type="text" value="${name}" class="s-name"><input type="number" value="${m}" class="s-min"><input type="number" value="${s}" class="s-sec"><button onclick="this.parentElement.remove()" style="border-color:var(--bad);color:var(--bad)">×</button>`;
-          document.getElementById("stageInputs").appendChild(div);
-        }
-
-        document.getElementById("addStage").onclick = () => addStageRow();
-        document.getElementById("dlgSave").onclick = () => {
-          const rows = document.querySelectorAll("#stageInputs .rowbox");
-          const newStages = Array.from(rows)
-            .map((r) => ({
-              name: r.querySelector(".s-name").value || "工程",
-              sec:
-                (parseInt(r.querySelector(".s-min").value) || 0) * 60 +
-                (parseInt(r.querySelector(".s-sec").value) || 0),
-            }))
-            .filter((s) => s.sec > 0);
-          if (newStages.length > 0) {
-            const t = state.timers[currentEditIdx];
-            t.stages = newStages;
-            t.stageIdx = 0;
-            t.remainingSec = newStages[0].sec;
-          }
-          state.editing = false;
-          save();
-          render();
-          dlg.close();
-        };
-
-        function checkGlobalAlert() {
-          const any = state.timers.some((t) => t.alerting);
-          if (any) {
-            if (!alertInterval) {
-              beep();
-              alertInterval = setInterval(beep, 2000);
-            }
-          } else {
-            if (alertInterval) {
-              clearInterval(alertInterval);
-              alertInterval = null;
-            }
-          }
         }
 
         function tick() {
@@ -558,7 +324,7 @@
                 t.running = false;
                 t.stageDone = true;
                 t.alerting = true;
-                checkGlobalAlert();
+                checkAlert();
               }
             }
           });
@@ -566,16 +332,20 @@
             new Date().toLocaleTimeString();
         }
 
-        document.getElementById("allStop").onclick = () => {
-          state.timers.forEach((t) => (t.running = false));
-          render();
-        };
+        // 復帰時の音再生対策
+        document.addEventListener("visibilitychange", () => {
+          if (document.visibilityState === "visible") ensureAudio();
+        });
+        document.addEventListener("pointerdown", ensureAudio, {
+          passive: true,
+        });
         document.getElementById("allReset").onclick = () => {
-          if (confirm("全リセットしますか？")) {
+          if (confirm("全リセット？")) {
             localStorage.clear();
             location.reload();
           }
         };
+
         function save() {
           localStorage.setItem(LS_KEY, JSON.stringify(state.timers));
         }
