@@ -516,11 +516,26 @@
             new Date().toLocaleTimeString();
         }
 
-        // 復帰時の音再生対策
+        // --- 復帰時の音再生対策（強化版） ---
+        const restartAudio = () => {
+          if (audioCtx) {
+            // 音のエンジンが眠っていたら「再開」を命じる
+            if (audioCtx.state === "suspended") {
+              audioCtx.resume();
+            }
+          }
+          ensureAudio(); // 既存の準備処理も実行
+        };
+
+        // 画面に戻ってきたときに自動で再開を試みる
         document.addEventListener("visibilitychange", () => {
-          if (document.visibilityState === "visible") ensureAudio();
+          if (document.visibilityState === "visible") {
+            restartAudio();
+          }
         });
-        document.addEventListener("pointerdown", ensureAudio, {
+
+        // 画面のどこかを触った瞬間に音の詰まりを解消する
+        document.addEventListener("pointerdown", restartAudio, {
           passive: true,
         });
         function save() {
