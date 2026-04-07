@@ -147,7 +147,6 @@
     <header>
       <div class="title-row">
         <h1>10パン工程タイマー</h1>
-        <button id="allReset" style="color: var(--bad)">全リセット</button>
       </div>
     </header>
     <main>
@@ -180,29 +179,44 @@
         let alertInterval = null;
         const state = { editing: false, timers: [] };
 
-        // 初期データロード
-        const saved = localStorage.getItem(LS_KEY);
-        if (saved) {
-          state.timers = JSON.parse(saved);
-        } else {
-          for (let i = 0; i < N; i++) {
-            state.timers.push({
-              id: i + 1,
-              bread: `パン ${i + 1}`,
-              stages: [
-                { name: "一次発酵", sec: 3600 },
-                { name: "ベンチ", sec: 1200 },
-                { name: "最終発酵", sec: 3000 },
-              ],
-              stageIdx: 0,
-              remainingSec: 3600,
-              running: false,
-              stageDone: false,
-              alerting: false,
-            });
-          }
+        // --- データの読み込みと強制復旧 ---
+        let savedData = localStorage.getItem(LS_KEY);
+
+        // データが壊れている、または空っぽの場合の初期設定
+        const defaultTimers = [];
+        for (let i = 0; i < 10; i++) {
+          defaultTimers.push({
+            id: i + 1,
+            bread: `パン ${i + 1}`,
+            stages: [
+              { name: "一次発酵", sec: 3600 },
+              { name: "ベンチ", sec: 1200 },
+              { name: "最終発酵", sec: 3000 },
+            ],
+            stageIdx: 0,
+            remainingSec: 3600,
+            running: false,
+            stageDone: false,
+            alerting: false,
+          });
         }
 
+        // 保存データがあれば読み込み、なければ初期設定を使う
+        if (savedData) {
+          try {
+            state.timers = JSON.parse(savedData);
+            // 万が一、読み込んだデータが空配列だったら初期設定を入れる
+            if (state.timers.length === 0) state.timers = defaultTimers;
+          } catch (e) {
+            // データが壊れて読み込めない場合も初期設定を入れる
+            state.timers = defaultTimers;
+          }
+        } else {
+          state.timers = defaultTimers;
+        }
+
+        // 復旧したデータを一度保存しておく
+        save();
         function ensureAudio() {
           if (!audioCtx || audioCtx.state === "closed")
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -508,13 +522,6 @@
         document.addEventListener("pointerdown", ensureAudio, {
           passive: true,
         });
-        document.getElementById("allReset").onclick = () => {
-          if (confirm("全リセット？")) {
-            localStorage.clear();
-            location.reload();
-          }
-        };
-
         function save() {
           localStorage.setItem(LS_KEY, JSON.stringify(state.timers));
         }
