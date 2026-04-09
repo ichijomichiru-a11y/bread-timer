@@ -500,22 +500,34 @@
           render(); // 画面を更新してタイマー描画を再開
         };
 
+        let lastTickTime = Date.now(); // 前回の計算時刻を記録しておく変数
+
         function tick() {
-          state.timers.forEach((t) => {
-            if (t.running && t.remainingSec > 0) {
-              t.remainingSec--;
-              if (t.remainingSec === 0) {
-                t.running = false;
-                t.stageDone = true;
-                t.alerting = true;
-                checkAlert();
+          const now = Date.now();
+          const delta = Math.floor((now - lastTickTime) / 1000); // 前回から何秒経過したか計算
+
+          if (delta >= 1) {
+            // 1秒以上経過していたら
+            state.timers.forEach((t) => {
+              if (t.running && t.remainingSec > 0) {
+                // 1ずつ引くのではなく、経過した秒数分を一気に引く
+                t.remainingSec = Math.max(0, t.remainingSec - delta);
+
+                if (t.remainingSec === 0) {
+                  t.running = false;
+                  t.stageDone = true;
+                  t.alerting = true;
+                  checkAlert();
+                }
               }
-            }
-          });
+            });
+            lastTickTime = now; // 基準時刻を更新
+          }
+
+          // 時計の表示更新
           document.getElementById("clock").textContent =
             new Date().toLocaleTimeString();
         }
-
         // --- 復帰時の音再生対策（強化版） ---
         const restartAudio = () => {
           if (audioCtx) {
