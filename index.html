@@ -141,6 +141,24 @@
         color: var(--muted);
         font-family: var(--mono);
       }
+      /* 既存のCSSの最後に追加 */
+      .blink-active {
+        animation: blink-animation 1s infinite;
+        background-color: #ff9800 !important; /* オレンジ色で注意を引く */
+        color: white !important;
+      }
+
+      @keyframes blink-animation {
+        0% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.5;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
     </style>
   </head>
   <body>
@@ -259,9 +277,9 @@
 
             const m = Math.floor(t.remainingSec / 60);
             const s = t.remainingSec % 60;
+            // --- ボタンの見た目を判定 ---
             const isLast = t.stageIdx >= t.stages.length - 1;
-
-            // メッセージ判定
+            // --- メッセージ判定を追加 ---
             let msg = `${t.stages[t.stageIdx].name} (${Math.floor(t.stages[t.stageIdx].sec / 60)}分設定)`;
             let msgStyle = "color:var(--muted)";
             if (t.alerting) {
@@ -272,6 +290,20 @@
             } else if (t.stageDone) {
               msg = isLast ? "✅ 全工程クリア" : "✅ 工程完了（待機中）";
               msgStyle = "color:var(--ok); font-weight:bold;";
+            }
+            const isWaiting = t.stageDone && !t.running && !isLast; // 次の工程を待っている状態
+
+            // クラス名を組み立てる（待機中なら blink-active を追加）
+            const startBtnClass = `start-btn btn-full ${t.running ? "warn" : "ok"} ${isWaiting ? "blink-active" : ""}`;
+
+            // ボタンの文字を判定
+            let btnText = "▶️ 開始";
+            if (t.running) {
+              btnText = "停止";
+            } else if (t.alerting) {
+              btnText = "🔔 音を止める";
+            } else if (t.stageDone) {
+              btnText = isLast ? "✅ 全工程終了" : "➡️ 次工程開始 (待機中)";
             }
 
             card.innerHTML = `
@@ -290,8 +322,8 @@
                     <button class="primary edit-btn" ${t.running ? 'disabled style="opacity:0.3"' : ""}>工程編集</button>
                     <button class="skip-btn" ${isLast || t.running ? "disabled" : ""}>次工程へ</button>
                     <button class="reset-btn">リセット</button>
-                    <button class="start-btn btn-full ${t.running ? "warn" : "ok"}">
-                        ${t.running ? "停止" : t.alerting ? "🔔 音を止める" : t.stageDone ? (isLast ? "✅ 終了" : "➡️ 次工程開始") : "▶️ 開始"}
+                    <button class="${startBtnClass}">
+                        ${btnText}
                     </button>
                 </div>
             `;
