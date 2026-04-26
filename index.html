@@ -315,8 +315,10 @@
                 <div style="text-align:center; font-size:13px; ${msgStyle}">${msg}</div>
                 <div class="time" style="${t.alerting ? "color:var(--bad)" : ""}">${m}:${String(s).padStart(2, "0")}</div>
                 <div style="display: flex; gap: 6px; margin-bottom: 8px;">
-                    <button class="ext-btn" data-m="5" style="flex:1; padding:8px; font-size:12px; border-color:var(--warn); color:var(--warn);">+5分</button>
-                    <button class="ext-btn" data-m="10" style="flex:1; padding:8px; font-size:12px; border-color:var(--warn); color:var(--warn);">+10分</button>
+                    <button class="ext-btn" data-m="-10" style="flex:1; padding:8px 2px; font-size:11px; border-color:#999; color:#999;">-10分</button>
+                    <button class="ext-btn" data-m="-5" style="flex:1; padding:8px 2px; font-size:11px; border-color:#999; color:#999;">-5分</button>
+                    <button class="ext-btn" data-m="5" style="flex:1; padding:8px 2px; font-size:11px; border-color:var(--warn); color:var(--warn);">+5分</button>
+                    <button class="ext-btn" data-m="10" style="flex:1; padding:8px 2px; font-size:11px; border-color:var(--warn); color:var(--warn);">+10分</button>
                 </div>
                 <div class="actions">
                     <button class="primary edit-btn" ${t.running ? 'disabled style="opacity:0.3"' : ""}>工程編集</button>
@@ -413,22 +415,26 @@
               checkAlert();
               render();
             };
-            // --- 追加：延長ボタンのクリックイベント ---
+            // 時間延長・短縮ボタンの処理
             card.querySelectorAll(".ext-btn").forEach((btn) => {
               btn.onclick = () => {
                 ensureAudio();
-                // ボタンから「5」や「10」を取得して秒に変換
-                const addSec = parseInt(btn.dataset.m) * 60;
-                t.remainingSec += addSec;
+                const diffMin = parseInt(btn.dataset.m);
+                const diffSec = diffMin * 60;
 
-                // 延長した際のルール設定
-                t.running = true; // 自動でタイマーを開始する
-                t.stageDone = false; // 「完了」の状態を解除する
-                t.alerting = false; // 鳴っている音を止める
+                // 現在の残り時間に加減算（0秒未満にはならないように制限）
+                t.remainingSec = Math.max(0, t.remainingSec + diffSec);
 
-                checkAlert(); // 全体の音の状態をチェック
-                save(); // データを保存
-                render(); // 画面を更新
+                // もし稼働中に時間を減らして0秒になったら、即座にアラームを鳴らす
+                if (t.remainingSec === 0 && t.running) {
+                  t.running = false;
+                  t.stageDone = true;
+                  t.alerting = true;
+                }
+
+                checkAlert();
+                save();
+                render();
               };
             });
             card.querySelector(".skip-btn").onclick = () => {
